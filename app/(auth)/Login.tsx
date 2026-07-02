@@ -11,6 +11,7 @@ import {
   Image
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { router } from "expo-router";
 
 const Login = () => {
   const [secure, setSecure] = useState(true);
@@ -43,7 +44,7 @@ const Login = () => {
             </View>
 
             {/* Heading */}
-            <Text style={styles.title}>Welcome to Padi Learn</Text>
+            <Text style={styles.title}>Welcome Back</Text>
             <Text style={styles.subtitle}>
               Enter your sign in details to continue
             </Text>
@@ -78,7 +79,7 @@ const Login = () => {
             </View>
 
             {/* Sign In */}
-            <TouchableOpacity style={styles.button}>
+            <TouchableOpacity style={styles.button} onPress={() => router.push("/(tabs)")}>
               <Text style={styles.buttonText}>Sign in</Text>
             </TouchableOpacity>
 
@@ -90,7 +91,7 @@ const Login = () => {
 
           {/* Bottom Footer Section */}
           <View style={styles.bottomSection}>
-            <TouchableOpacity>
+            <TouchableOpacity onPress={()=> router.push("/(auth)/Register")}>
               <Text style={styles.createAccount}>Create an account</Text>
             </TouchableOpacity>
             <Text style={styles.version}>Version 1.0.0</Text>
