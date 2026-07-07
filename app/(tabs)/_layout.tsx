@@ -9,17 +9,14 @@ import {
   Compass, 
   BookOpen, 
   User, 
-  GraduationCap ,
   Home
 } from 'lucide-react-native';
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
   
-  // Clean solid configuration: We're passing your solid brand blue (#004aad) 
-  // directly for light mode active states to keep it consistent with the clean layout
-const activeColor = colorScheme === 'dark' ? '#230444' : '#110023';
-const inactiveColor = colorScheme === 'dark' ? '#64748b' : '#73868e';
+  const activeColor = colorScheme === 'dark' ? '#230444' : '#110023';
+  const inactiveColor = colorScheme === 'dark' ? '#64748b' : '#73868e';
 
   return (
     <Tabs
@@ -28,7 +25,6 @@ const inactiveColor = colorScheme === 'dark' ? '#64748b' : '#73868e';
         tabBarInactiveTintColor: inactiveColor,
         headerShown: false,
         tabBarButton: HapticTab,
-        // Premium typography config mirroring the tight layout spacing rules
         tabBarLabelStyle: {
           fontSize: 11,
           fontWeight: '700',
@@ -61,8 +57,21 @@ const inactiveColor = colorScheme === 'dark' ? '#64748b' : '#73868e';
           ),
         }}
       />
-      
 
+      <Tabs.Screen
+        name="courses"
+        options={{
+          title: 'Courses',
+          tabBarIcon: ({ color, focused }) => (
+            <BookOpen
+              size={27} 
+              color={color} 
+              strokeWidth={focused ? 2.5 : 2} 
+            />
+          ),
+        }}
+      />
+      
       {/* 2. Course Discovery Marketplace */}
       <Tabs.Screen
         name="explore"
@@ -70,6 +79,21 @@ const inactiveColor = colorScheme === 'dark' ? '#64748b' : '#73868e';
           title: 'Explore',
           tabBarIcon: ({ color, focused }) => (
             <Compass 
+              size={27} 
+              color={color} 
+              strokeWidth={focused ? 2.5 : 2} 
+            />
+          ),
+        }}
+      />
+
+      {/* 3. Social Engineering Profile Track */}
+      <Tabs.Screen
+        name="profile"
+        options={{
+          title: 'Profile',
+          tabBarIcon: ({ color, focused }) => (
+            <User 
               size={27} 
               color={color} 
               strokeWidth={focused ? 2.5 : 2} 

@@ -4,11 +4,21 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { User, Bell, GraduationCap, ShieldCheck, Bookmark, Video, BookOpen, Calendar, HelpCircle, MessageSquare, Award, TrendingUp } from "lucide-react-native";
 // Imported Gifted Line Chart Engine Component
 import { LineChart } from "react-native-gifted-charts";
+// Imported Router Hook for clean workspace transitions
+import { useRouter, Href } from 'expo-router';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CARD_WIDTH = SCREEN_WIDTH - 40;
 
+
+interface QuickActionItem {
+  label: string;
+  Icon: React.ComponentType<{ size: number; color: string; style?: any }>;
+  bg: string;
+  path: string | null; // Route path or null
+}
 const HomeScreen = () => {
+  const router = useRouter();
   const [activeSlide, setActiveSlide] = useState(0);
 
   const features = [
@@ -35,13 +45,13 @@ const HomeScreen = () => {
     }
   ];
 
-  const quickActions = [
-    { label: "Live Class", Icon: Video, bg: '#ff8a00' },
-    { label: "Courses", Icon: BookOpen, bg: '#22c55e' },
-    { label: "Timetable", Icon: Calendar, bg: '#0ea5e9' },
-    { label: "Support", Icon: HelpCircle, bg: '#a855f7' },
-    { label: "Chats", Icon: MessageSquare, bg: '#ec4899' },
-    { label: "Certificates", Icon: Award, bg: '#eab308' },
+  const quickActions: QuickActionItem[] = [
+    { label: "Live Class", Icon: Video, bg: '#ff8a00', path: null },
+    { label: "Courses", Icon: BookOpen, bg: '#22c55e', path: null },
+    { label: "Timetable", Icon: Calendar, bg: '#0ea5e9', path: null },
+    { label: "Support", Icon: HelpCircle, bg: '#a855f7', path: null },
+    { label: "Chats", Icon: MessageSquare, bg: '#ec4899', path: '/chat' }, // Mapped to app/chat/index.tsx
+    { label: "Certificates", Icon: Award, bg: '#eab308', path: null },
   ];
 
   // Learning Progress Dataset structured seamlessly for Gifted Charts
@@ -59,6 +69,12 @@ const HomeScreen = () => {
     const slideIndex = Math.round(event.nativeEvent.contentOffset.x / CARD_WIDTH);
     if (slideIndex !== activeSlide && slideIndex >= 0 && slideIndex < features.length) {
       setActiveSlide(slideIndex);
+    }
+  };
+
+  const handleActionPress = (action: typeof quickActions[0]) => {
+    if (action.path) {
+      router.push(action.path as any);
     }
   };
 
@@ -100,8 +116,8 @@ const HomeScreen = () => {
             {features.map((item, index) => {
               const CustomIcon = item.Icon;
               return (
-                <ImageBackground 
-                  key={index} 
+                <ImageBackground
+                  key={index}
                   source={item.image}
                   style={styles.infoCard}
                   imageStyle={styles.cardImageStyle}
@@ -137,19 +153,20 @@ const HomeScreen = () => {
         {/** Horizontal Scrollable Circles Section with Floating Spacer Ring */}
         <View style={styles.actionsSection}>
           <Text style={styles.sectionTitle}>Quick Actions</Text>
-          
-          <ScrollView 
-            horizontal 
+
+          <ScrollView
+            horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.scrollerContent}
           >
             {quickActions.map((action, index) => {
               const ActionIcon = action.Icon;
               return (
-                <TouchableOpacity 
-                  key={index} 
-                  style={styles.circleItemWrapper} 
+                <TouchableOpacity
+                  key={index}
+                  style={styles.circleItemWrapper}
                   activeOpacity={0.8}
+                  onPress={() => handleActionPress(action)}
                 >
                   {/* Outer vibrant border wrapper container circle */}
                   <View style={[styles.actionCircle, { borderColor: action.bg }]}>
@@ -158,7 +175,7 @@ const HomeScreen = () => {
                       <ActionIcon size={20} color="#ffffff" />
                     </View>
                   </View>
-                  
+
                   {/* Name clearly aligned at the bottom of the circle layout combo */}
                   <Text numberOfLines={1} style={styles.circleLabel}>
                     {action.label}
@@ -222,6 +239,20 @@ const HomeScreen = () => {
           </View>
         </View>
 
+        <View style={styles.explore}>
+          <View style={{}}>
+            <BookOpen color="#110023" size={60} />
+          </View>
+
+          <View style={styles.exploreContent}>
+            <Text style={styles.cardTitle}>Start your learning Journey</Text>
+            <Text style={[styles.cardDesc]}> Enroll to various courses today and start learning</Text>
+          </View>
+
+          <TouchableOpacity style={styles.exploreButton} onPress={() => router.push("/(tabs)/courses")}>
+            <Text style={{ fontFamily: "OnestLight", color: "white", fontSize:12}}>Explore Courses</Text>
+          </TouchableOpacity>
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -300,12 +331,12 @@ const styles = StyleSheet.create({
   },
   infoCard: {
     width: CARD_WIDTH,
-    height: 180, 
-    backgroundColor: '#f8fafc', 
+    height: 180,
+    backgroundColor: '#f8fafc',
     borderWidth: 1,
     borderColor: '#e2e8f0',
     borderRadius: 20,
-    overflow: 'hidden', 
+    overflow: 'hidden',
   },
   cardImageStyle: {
     width: '100%',
@@ -316,7 +347,7 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 24,
     justifyContent: 'center',
-    backgroundColor: 'rgba(248, 250, 252, 0.88)', 
+    backgroundColor: 'rgba(248, 250, 252, 0.88)',
   },
   cardHeaderRow: {
     flexDirection: 'row',
@@ -394,23 +425,21 @@ const styles = StyleSheet.create({
     gap: 8,
     width: 72,
   },
-  // The Outer Circle acts as a ring outline container
   actionCircle: {
     width: 66,
     height: 66,
     borderRadius: 33,
-    borderWidth: 2, 
+    borderWidth: 2,
     backgroundColor: 'transparent',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  // The Inner Circle leaves precise padding whitespace creating a floating loop effect
   actionInnerCircle: {
     width: 54,
     height: 54,
     borderRadius: 27,
     borderWidth: 3,
-    borderColor: '#ffffff', // Strips ring intersection line
+    borderColor: '#ffffff',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -422,8 +451,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     letterSpacing: -0.1,
   },
-
-  // Premium Gifted Area Analytics Layout Container Card
   analyticsSection: {
     marginTop: 32,
     marginHorizontal: 20,
@@ -469,7 +496,7 @@ const styles = StyleSheet.create({
     color: '#16803d',
   },
   chartWrapperCanvas: {
-    marginRight: -20, // Clean canvas alignments
+    marginRight: -20,
     marginTop: 10,
     alignItems: 'center',
   },
@@ -486,6 +513,32 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '600',
   },
+  explore: {
+    marginTop: 32,
+    marginHorizontal: 20,
+    padding: 20,
+    backgroundColor: '#f8fafc',
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: '#f1f5f9',
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center"
+  },
+  exploreContent: {
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center"
+  },
+  exploreButton: {
+    width: "45%",
+    marginTop: 24,
+    height: 46,
+    borderRadius: 28,
+    backgroundColor: "#110023",
+    justifyContent: "center",
+    alignItems: "center",
+  }
 });
 
 export default HomeScreen;
