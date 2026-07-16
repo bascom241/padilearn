@@ -12,10 +12,36 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
+import { useRegister } from "@/features/auth/hooks/useRegster";
+import { ActivityIndicator } from "react-native";
+import { handleApiError } from "@/utils/handleApiError";
+import { handleApiSuccess } from "@/utils/handleApiSuccess";
 
 const Register = () => {
     const [secure, setSecure] = useState(true);
-    const logo = require('../../assets/images/Padi.png')
+    const logo = require('../../assets/images/Padi.png');
+
+    const [formData, setFormData] = useState({ fullName: "", email: "", password: "" });
+    const { mutate, error, isPending } = useRegister();
+
+    const handleChange = (fieldName: string, value: string) => {
+        setFormData({ ...formData, [fieldName]: value })
+    }
+
+    const handleSuccess = () => {
+        router.push("/(auth)/VerifyEmail")
+    }
+
+    const handleSubmit = () => {
+        mutate(formData, {
+            onSuccess: (data) => {
+                handleApiSuccess(data, "Verify your email");
+                handleSuccess()
+            }, 
+            onError: handleApiError,
+        });
+    }
+
     return (
         <KeyboardAvoidingView
             behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -56,6 +82,8 @@ const Register = () => {
                                 placeholderTextColor="#8B8B95"
                                 style={styles.input}
                                 autoCapitalize="none"
+                                value={formData.fullName}
+                                onChangeText={(text) => handleChange("fullName", text)}
                             />
                         </View>
                         <View style={styles.inputWrapper}>
@@ -65,6 +93,8 @@ const Register = () => {
                                 style={styles.input}
                                 keyboardType="email-address"
                                 autoCapitalize="none"
+                                value={formData.email}
+                                onChangeText={(text) => handleChange("email", text)}
                             />
                         </View>
 
@@ -77,6 +107,9 @@ const Register = () => {
                                 secureTextEntry={secure}
                                 style={styles.input}
                                 autoCapitalize="none"
+                                value={formData.password}
+                                onChangeText={(text) => handleChange("password", text)}
+
                             />
                             <TouchableOpacity onPress={() => setSecure(!secure)}>
                                 <Ionicons
@@ -88,8 +121,13 @@ const Register = () => {
                         </View>
 
                         {/* Sign In */}
-                        <TouchableOpacity style={styles.button}>
-                            <Text style={styles.buttonText}>Sign in</Text>
+                        <TouchableOpacity style={styles.button} onPress={handleSubmit}>
+
+                            {
+                                isPending ? <ActivityIndicator animating={true} color="white" /> : <Text style={styles.buttonText}>Sign up</Text>
+                            }
+
+
                         </TouchableOpacity>
 
                         {/* Forgot */}
@@ -100,8 +138,8 @@ const Register = () => {
 
                     {/* Bottom Footer Section */}
                     <View style={styles.bottomSection}>
-                        <TouchableOpacity style={{flexDirection:"row", alignItems:"center", gap:4}} onPress={()=> router.push("/(auth)/Login")}>
-                            <Text style={{color:"gray"}}>Already have an account?</Text>
+                        <TouchableOpacity style={{ flexDirection: "row", alignItems: "center", gap: 4 }} onPress={() => router.push("/(auth)/Login")}>
+                            <Text style={{ color: "gray" }}>Already have an account?</Text>
                             <Text style={styles.createAccount}>Log In</Text>
                         </TouchableOpacity>
                         <Text style={styles.version}>Version 1.0.0</Text>
@@ -217,10 +255,10 @@ const styles = StyleSheet.create({
         marginTop: 20,
     },
     createAccount: {
-       
+
         color: "#110023",
         fontFamily: "OnestBold",
-    
+
     },
     version: {
         marginTop: 12,
@@ -232,4 +270,5 @@ const styles = StyleSheet.create({
         width: 200,
         height: 200,
     },
+
 });

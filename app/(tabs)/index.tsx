@@ -6,7 +6,7 @@ import { User, Bell, GraduationCap, ShieldCheck, Bookmark, Video, BookOpen, Cale
 import { LineChart } from "react-native-gifted-charts";
 // Imported Router Hook for clean workspace transitions
 import { useRouter, Href } from 'expo-router';
-
+import GetProfile from '@/components/profile/getProfile';
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CARD_WIDTH = SCREEN_WIDTH - 40;
 
@@ -90,10 +90,7 @@ const HomeScreen = () => {
               </View>
             </View>
 
-            <View style={styles.headerProfileName}>
-              <Text style={styles.greetText}>Hello,</Text>
-              <Text style={styles.userName}>Abdulbasit</Text>
-            </View>
+            <GetProfile />
           </View>
 
           <View style={styles.bellWrapper}>
@@ -250,7 +247,7 @@ const HomeScreen = () => {
           </View>
 
           <TouchableOpacity style={styles.exploreButton} onPress={() => router.push("/(tabs)/courses")}>
-            <Text style={{ fontFamily: "OnestLight", color: "white", fontSize:12}}>Explore Courses</Text>
+            <Text style={{ fontFamily: "OnestLight", color: "white", fontSize: 12 }}>Explore Courses</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>

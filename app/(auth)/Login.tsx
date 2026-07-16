@@ -8,14 +8,38 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  Image
+  Image,
+  ActivityIndicator
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
-
+import { useLogin } from "@/features/auth/hooks/useLogin";
+import { handleApiError } from "@/utils/handleApiError";
+import { handleApiSuccess } from "@/utils/handleApiSuccess";
+import { saveToken } from "@/utils/tokenService";
 const Login = () => {
   const [secure, setSecure] = useState(true);
-    const logo = require('../../assets/images/Padi.png')
+    const logo = require('../../assets/images/Padi.png');
+    const [formData,setFormData] = useState({email:"", password:""});
+    const {mutate,isPending} = useLogin()
+
+
+    const handleChange = (fieldName: string, value: string)  => {
+      setFormData({...formData, [fieldName]:value})
+    }
+
+
+    const handleSubmit =  () => {
+      console.log("ENTERING ")
+      mutate(formData,{
+        onSuccess: async (response)=> {
+            handleApiSuccess(response, "login successful")
+            router.push("/(tabs)");
+            const {accessToken, refreshToken} = response.data; 
+            await saveToken(accessToken, refreshToken);
+        },onError: handleApiError
+      } )
+    }
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -57,6 +81,8 @@ const Login = () => {
                 style={styles.input}
                 keyboardType="email-address"
                 autoCapitalize="none"
+                value={formData.email}
+                onChangeText={(text)=> handleChange("email", text )}
               />
             </View>
 
@@ -68,6 +94,8 @@ const Login = () => {
                 secureTextEntry={secure}
                 style={styles.input}
                 autoCapitalize="none"
+                value={formData.password}
+                onChangeText={(text)=> handleChange( "password", text )}
               />
               <TouchableOpacity onPress={() => setSecure(!secure)}>
                 <Ionicons
@@ -79,8 +107,11 @@ const Login = () => {
             </View>
 
             {/* Sign In */}
-            <TouchableOpacity style={styles.button} onPress={() => router.push("/(tabs)")}>
-              <Text style={styles.buttonText}>Sign in</Text>
+            <TouchableOpacity style={styles.button} onPress={handleSubmit}>
+              {
+                isPending ?  <ActivityIndicator animating={true} color="white" /> : <Text style={styles.buttonText}>Sign in</Text>
+              }
+            
             </TouchableOpacity>
 
             {/* Forgot */}

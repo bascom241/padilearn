@@ -103,7 +103,6 @@ const styles = StyleSheet.create({
         justifyContent: "center",
         alignItems: "center",
     },
-
     arrow: {
         color: "white",
         fontSize: 28,
