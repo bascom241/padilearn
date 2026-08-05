@@ -16,12 +16,13 @@ import { router } from "expo-router";
 import { useLogin } from "@/features/auth/hooks/useLogin";
 import { handleApiError } from "@/utils/handleApiError";
 import { handleApiSuccess } from "@/utils/handleApiSuccess";
-import { saveToken } from "@/utils/tokenService";
+import { useAuth } from "@/providers/AuthProvider";
 const Login = () => {
   const [secure, setSecure] = useState(true);
     const logo = require('../../assets/images/Padi.png');
     const [formData,setFormData] = useState({email:"", password:""});
     const {mutate,isPending} = useLogin()
+    const { login } = useAuth();
 
 
     const handleChange = (fieldName: string, value: string)  => {
@@ -30,13 +31,14 @@ const Login = () => {
 
 
     const handleSubmit =  () => {
-      console.log("ENTERING ")
       mutate(formData,{
         onSuccess: async (response)=> {
-            handleApiSuccess(response, "login successful")
-            router.push("/(tabs)");
-            const {accessToken, refreshToken} = response.data; 
-            await saveToken(accessToken, refreshToken);
+          console.log(response)
+            handleApiSuccess(response, "Login successful")
+            const {accessToken, refreshToken} = response.data;
+            console.log(accessToken, refreshToken)
+            await login(accessToken, refreshToken);
+            router.replace("/(tabs)");
         },onError: handleApiError
       } )
     }

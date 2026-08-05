@@ -6,11 +6,11 @@ interface CourseCardProps {
   course?: {
     title: string;
     category: string;
-    lessons: number;
-    duration: string;
-    rating: number;
-    level: string; 
-    price: string; 
+    lessons?: number;
+    duration?: string;
+    rating?: number;
+    level: string;
+    price: string;
     image: any;
   };
   onPress?: () => void;
@@ -42,10 +42,12 @@ const CourseCard = ({ course, onPress }: CourseCardProps) => {
       {/* Meta Metric Details Breakdown Elements */}
       <View style={styles.detailsContainer}>
         <View style={styles.ratingRow}>
-          <View style={styles.starGroup}>
-            <Star size={12} color="#eab308" fill="#eab308" />
-            <Text style={styles.ratingText}>{data.rating}</Text>
-          </View>
+          {data.rating !== undefined && (
+            <View style={styles.starGroup}>
+              <Star size={12} color="#eab308" fill="#eab308" />
+              <Text style={styles.ratingText}>{data.rating}</Text>
+            </View>
+          )}
           <View style={styles.levelGroup}>
             <Layers size={11} color="#64748b" />
             <Text style={styles.levelText}>{data.level}</Text>
@@ -57,14 +59,18 @@ const CourseCard = ({ course, onPress }: CourseCardProps) => {
         </Text>
 
         <View style={styles.metaRow}>
-          <View style={styles.metaItem}>
-            <BookOpen size={13} color="#64748b" />
-            <Text style={styles.metaText}>{data.lessons} Lessons</Text>
-          </View>
-          <View style={styles.metaItem}>
-            <Clock size={13} color="#64748b" />
-            <Text style={styles.metaText}>{data.duration}</Text>
-          </View>
+          {data.lessons !== undefined && (
+            <View style={styles.metaItem}>
+              <BookOpen size={13} color="#64748b" />
+              <Text style={styles.metaText}>{data.lessons} Lessons</Text>
+            </View>
+          )}
+          {data.duration !== undefined && (
+            <View style={styles.metaItem}>
+              <Clock size={13} color="#64748b" />
+              <Text style={styles.metaText}>{data.duration}</Text>
+            </View>
+          )}
         </View>
 
         <View style={styles.divider} />

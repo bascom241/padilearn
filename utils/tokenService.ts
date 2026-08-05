@@ -2,6 +2,7 @@ import * as SecureStore from 'expo-secure-store';
 
 const ACCESS_KEY = 'access-token';
 const REFRESH_KEY = 'refresh-token';
+const ONBOARDING_SEEN_KEY = 'has-seen-onboarding';
 
 
 export const saveToken = async (accessToken: string, refreshToken: string) => {
@@ -40,5 +41,22 @@ export const removeToken = async () => {
     await SecureStore.deleteItemAsync(REFRESH_KEY)
   } catch (error) {
     console.error("Error deleting token:", error);
+  }
+};
+
+export const setHasSeenOnboarding = async () => {
+  try {
+    await SecureStore.setItemAsync(ONBOARDING_SEEN_KEY, 'true');
+  } catch (error) {
+    console.error("Error saving onboarding flag:", error);
+  }
+};
+
+export const getHasSeenOnboarding = async () => {
+  try {
+    return (await SecureStore.getItemAsync(ONBOARDING_SEEN_KEY)) === 'true';
+  } catch (error) {
+    console.error("Error reading onboarding flag:", error);
+    return false;
   }
 };

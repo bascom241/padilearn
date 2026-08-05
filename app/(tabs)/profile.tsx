@@ -1,114 +1,167 @@
-import React from 'react';
-import { StyleSheet, Text, View, ScrollView, TouchableOpacity, Dimensions } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { StyleSheet, Text, View, ScrollView, TouchableOpacity, Modal, TextInput, Image, ActivityIndicator, Alert, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Settings, Award, GraduationCap, Clock, ChevronRight, BookOpen, FileCode2, ShieldAlert } from 'lucide-react-native';
+import { Settings, Award, Clock, BookOpen, X, Camera, LogOut } from 'lucide-react-native';
+import * as ImagePicker from 'expo-image-picker';
+import { useGetProfile } from '@/features/profile/hooks/useGetProfile';
+import { useUpdateProfile } from '@/features/profile/hooks/useUpdateProfile';
+import { useUploadAvatar } from '@/features/profile/hooks/useUploadAvatar';
+import { useAuth } from '@/providers/AuthProvider';
+import { handleApiError } from '@/utils/handleApiError';
+import { toast } from '@/utils/toast';
+import { router } from 'expo-router';
+
+const capitalize = (value: string) => value.charAt(0).toUpperCase() + value.slice(1);
 
 export default function Profile() {
-  // Student Context Identity Dataset
-  const studentProfile = {
-    name: "Abdulwahab",
-    handle: "student_id_8942",
-    track: "AI & Full-Stack Infrastructure",
-    cohort: "Edulink Tech Cohort 2026",
-    joined: "Enrolled Jan 2026",
-    coursesEnrolled: 4,
-    completedCerts: 2,
-    learningHours: "148 hrs"
+  const { data: profile, isPending, error } = useGetProfile();
+  const updateProfile = useUpdateProfile();
+  const uploadAvatar = useUploadAvatar();
+  const { logout } = useAuth();
+
+  const [editVisible, setEditVisible] = useState(false);
+  const [fullName, setFullName] = useState('');
+  const [bio, setBio] = useState('');
+
+  useEffect(() => {
+    if (profile) {
+      setFullName(profile.fullName);
+      setBio(profile.bio ?? '');
+    }
+  }, [profile]);
+
+  const handlePickAvatar = async () => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      toast.error('Permission needed', 'Allow photo library access to change your avatar.');
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+
+    if (result.canceled || !result.assets?.[0]) return;
+
+    uploadAvatar.mutate(result.assets[0].uri, {
+      onSuccess: () => toast.success('Avatar updated'),
+      onError: handleApiError,
+    });
   };
 
-  // Student-Focused Progress Milestones & System Options
-  const learningInventory = [
-    { 
-      label: "Verified Certifications", 
-      Icon: Award, 
-      desc: "View your earned architectural smart tokens and certificates",
-      badge: "2 Earned"
-    },
-    { 
-      label: "Academic & Cohort Settings", 
-      Icon: GraduationCap, 
-      desc: "Manage your live classroom schedules and cohort assignments",
-      badge: null
-    },
-    { 
-      label: "Assignments & Submissions", 
-      Icon: FileCode2, 
-      desc: "Review grading criteria, pending deadlines, and code reviews",
-      badge: "1 Pending"
-    }
-  ];
+  const handleSaveProfile = () => {
+    updateProfile.mutate(
+      { fullName: fullName.trim(), bio: bio.trim() },
+      {
+        onSuccess: () => {
+          toast.success('Profile updated');
+          setEditVisible(false);
+        },
+        onError: handleApiError,
+      },
+    );
+  };
+
+  const handleLogout = () => {
+    Alert.alert('Log out', 'Are you sure you want to log out?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Log out',
+        style: 'destructive',
+        onPress: async () => {
+          await logout();
+          router.replace('/(auth)/Login');
+        },
+      },
+    ]);
+  };
+
+  if (isPending) {
+    return (
+      <SafeAreaView style={[styles.container, styles.centerContent]}>
+        <ActivityIndicator size="large" color="#110023" />
+      </SafeAreaView>
+    );
+  }
+
+  if (error || !profile) {
+    return (
+      <SafeAreaView style={[styles.container, styles.centerContent]}>
+        <Text style={styles.errorText}>Could not load your profile.</Text>
+      </SafeAreaView>
+    );
+  }
+
+  const stats = profile.stats ?? { coursesEnrolled: 0, coursesCompleted: 0, learningHoursLogged: 0 };
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Top Twitter-Style Minimalist Student Header */}
       <View style={styles.headerActionRow}>
         <View style={styles.headerTitleContainer}>
-          <Text style={styles.headerTitle}>{studentProfile.name}</Text>
-          <Text style={styles.headerSubtitle}>{studentProfile.cohort}</Text>
+          <Text style={styles.headerTitle}>{profile.fullName}</Text>
+          <Text style={styles.headerSubtitle}>{capitalize(profile.role)}</Text>
         </View>
-        <TouchableOpacity style={styles.iconNode}>
+        <TouchableOpacity style={styles.iconNode} onPress={() => setEditVisible(true)}>
           <Settings size={20} color="#110023" />
         </TouchableOpacity>
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-        {/* Minimalist Accent Academic Banner */}
         <View style={styles.graphicBanner}>
           <View style={styles.innerGraphicPattern} />
         </View>
 
-        {/* Profile Identity Stack */}
         <View style={styles.identityMetaSection}>
           <View style={styles.avatarFloatingWrapper}>
-            <View style={styles.avatarMainPlate}>
-              <Text style={styles.avatarInitialText}>{studentProfile.name[0]}</Text>
-            </View>
+            <TouchableOpacity onPress={handlePickAvatar} style={styles.avatarMainPlate} activeOpacity={0.8}>
+              {uploadAvatar.isPending ? (
+                <ActivityIndicator color="#110023" />
+              ) : profile.avatarUrl ? (
+                <Image source={{ uri: profile.avatarUrl }} style={styles.avatarImage} />
+              ) : (
+                <Text style={styles.avatarInitialText}>{profile.fullName[0]}</Text>
+              )}
+              <View style={styles.avatarCameraBadge}>
+                <Camera size={12} color="#ffffff" />
+              </View>
+            </TouchableOpacity>
           </View>
 
-          <TouchableOpacity style={styles.editProfileOutlinePill}>
-            <Text style={styles.editButtonText}>Account Settings</Text>
+          <TouchableOpacity style={styles.editProfileOutlinePill} onPress={() => setEditVisible(true)}>
+            <Text style={styles.editButtonText}>Edit Profile</Text>
           </TouchableOpacity>
 
-          <Text style={styles.displayIdentityName}>{studentProfile.name}</Text>
-          <Text style={styles.subHandleText}>ID: {studentProfile.handle}</Text>
+          <Text style={styles.displayIdentityName}>{profile.fullName}</Text>
+          <Text style={styles.subHandleText}>{profile.email}</Text>
 
-          {/* Academic Track Definition */}
-          <Text style={styles.bioBodyText}>
-            Focusing on high-performance infrastructure, concurrent backend systems, and clean layout patterns. Track: <Text style={{ fontFamily: 'OnestBold', color: '#110023' }}>{studentProfile.track}</Text>
-          </Text>
+          {profile.bio ? (
+            <Text style={styles.bioBodyText}>{profile.bio}</Text>
+          ) : (
+            <Text style={[styles.bioBodyText, styles.bioPlaceholder]}>Add a short bio to tell your cohort about yourself.</Text>
+          )}
 
-          {/* Twitter-Style Micro-Meta Grid for Student Info */}
-          <View style={styles.metaDataGridBlock}>
-            <View style={styles.metaRowItem}>
-              <GraduationCap size={14} color="#64748b" />
-              <Text style={styles.metaLabelInlineText}>{studentProfile.cohort}</Text>
-            </View>
-            <View style={styles.metaRowItem}>
-              <Clock size={14} color="#64748b" />
-              <Text style={styles.metaLabelInlineText}>{studentProfile.joined}</Text>
-            </View>
-          </View>
-
-          {/* Twitter-Style Numerical Metrics Redesigned for Student Progress */}
           <View style={styles.socialFollowCounterRow}>
             <View style={styles.metricCounterItem}>
               <BookOpen size={15} color="#110023" style={{ marginRight: 4 }} />
               <Text style={styles.counterItemText}>
-                <Text style={styles.boldMetricSpan}>{studentProfile.coursesEnrolled}</Text> Courses
+                <Text style={styles.boldMetricSpan}>{stats.coursesEnrolled}</Text> Courses
               </Text>
             </View>
 
             <View style={styles.metricCounterItem}>
               <Award size={15} color="#110023" style={{ marginRight: 4 }} />
               <Text style={styles.counterItemText}>
-                <Text style={styles.boldMetricSpan}>{studentProfile.completedCerts}</Text> Certificates
+                <Text style={styles.boldMetricSpan}>{stats.coursesCompleted}</Text> Completed
               </Text>
             </View>
 
             <View style={styles.metricCounterItem}>
               <Clock size={15} color="#110023" style={{ marginRight: 4 }} />
               <Text style={styles.counterItemText}>
-                <Text style={styles.boldMetricSpan}>{studentProfile.learningHours}</Text> Logged
+                <Text style={styles.boldMetricSpan}>{stats.learningHoursLogged}</Text> hrs logged
               </Text>
             </View>
           </View>
@@ -116,36 +169,68 @@ export default function Profile() {
 
         <View style={styles.dividerLineBreak} />
 
-        {/* Academic Options / Student Portal List Tile Loop */}
         <View style={styles.optionsGroupingContainer}>
-          <Text style={styles.sectionGroupingLabel}>STUDENT PORTAL</Text>
-          
-          {learningInventory.map((node, index) => {
-            const SettingIcon = node.Icon;
-            return (
-              <TouchableOpacity key={index} style={styles.optionListTileRow} activeOpacity={0.7}>
-                <View style={styles.tileLeftCluster}>
-                  <View style={styles.tileIconFrame}>
-                    <SettingIcon size={18} color="#110023" />
-                  </View>
-                  <View style={styles.tileTextMetadataBlock}>
-                    <View style={styles.tileHeaderLine}>
-                      <Text style={styles.tileLabelHeading}>{node.label}</Text>
-                      {node.badge && (
-                        <View style={styles.inlinePillNotification}>
-                          <Text style={styles.notificationText}>{node.badge}</Text>
-                        </View>
-                      )}
-                    </View>
-                    <Text numberOfLines={1} style={styles.tileDescSubText}>{node.desc}</Text>
-                  </View>
-                </View>
-                <ChevronRight size={16} color="#94a3b8" />
-              </TouchableOpacity>
-            );
-          })}
+          <Text style={styles.sectionGroupingLabel}>ACCOUNT</Text>
+
+          <TouchableOpacity style={styles.optionListTileRow} activeOpacity={0.7} onPress={handleLogout}>
+            <View style={styles.tileLeftCluster}>
+              <View style={styles.tileIconFrame}>
+                <LogOut size={18} color="#ef4444" />
+              </View>
+              <View style={styles.tileTextMetadataBlock}>
+                <Text style={[styles.tileLabelHeading, { color: '#ef4444' }]}>Log Out</Text>
+                <Text style={styles.tileDescSubText}>Sign out of your account on this device</Text>
+              </View>
+            </View>
+          </TouchableOpacity>
         </View>
       </ScrollView>
+
+      <Modal animationType="slide" transparent visible={editVisible} onRequestClose={() => setEditVisible(false)}>
+        <KeyboardAvoidingView
+          style={styles.modalOverlay}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        >
+          <View style={styles.modalSheet}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalHeaderTitle}>Edit Profile</Text>
+              <TouchableOpacity style={styles.closeButton} onPress={() => setEditVisible(false)}>
+                <X size={18} color="#110023" />
+              </TouchableOpacity>
+            </View>
+
+            <Text style={styles.inputLabel}>Full name</Text>
+            <TextInput
+              style={styles.textInput}
+              value={fullName}
+              onChangeText={setFullName}
+              placeholder="Your full name"
+            />
+
+            <Text style={styles.inputLabel}>Bio</Text>
+            <TextInput
+              style={[styles.textInput, styles.bioInput]}
+              value={bio}
+              onChangeText={setBio}
+              placeholder="Tell your cohort about yourself"
+              multiline
+              maxLength={280}
+            />
+
+            <TouchableOpacity
+              style={[styles.saveButton, updateProfile.isPending && { opacity: 0.6 }]}
+              onPress={handleSaveProfile}
+              disabled={updateProfile.isPending}
+            >
+              {updateProfile.isPending ? (
+                <ActivityIndicator color="#ffffff" />
+              ) : (
+                <Text style={styles.saveButtonText}>Save Changes</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -154,6 +239,15 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#ffffff',
+  },
+  centerContent: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  errorText: {
+    fontFamily: 'OnestNormal',
+    fontSize: 14,
+    color: '#64748b',
   },
   headerActionRow: {
     flexDirection: 'row',
@@ -179,6 +273,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: '#64748b',
     marginTop: -1,
+    textTransform: 'capitalize',
   },
   iconNode: {
     padding: 4,
@@ -213,6 +308,25 @@ const styles = StyleSheet.create({
     borderRadius: 38,
     backgroundColor: '#f1f5f9',
     borderWidth: 4,
+    borderColor: '#ffffff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'visible',
+  },
+  avatarImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 34,
+  },
+  avatarCameraBadge: {
+    position: 'absolute',
+    bottom: -2,
+    right: -2,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#110023',
+    borderWidth: 2,
     borderColor: '#ffffff',
     alignItems: 'center',
     justifyContent: 'center',
@@ -259,22 +373,9 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     marginTop: 10,
   },
-  metaDataGridBlock: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    columnGap: 14,
-    rowGap: 6,
-    marginTop: 12,
-  },
-  metaRowItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  metaLabelInlineText: {
-    fontFamily: 'OnestLight',
-    fontSize: 12,
-    color: '#64748b',
+  bioPlaceholder: {
+    color: '#94a3b8',
+    fontStyle: 'italic',
   },
   socialFollowCounterRow: {
     flexDirection: 'row',
@@ -340,34 +441,83 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: 1,
   },
-  tileHeaderLine: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
   tileLabelHeading: {
     fontFamily: 'OnestBold',
     fontSize: 13.5,
     fontWeight: '600',
     color: '#110023',
   },
-  inlinePillNotification: {
-    backgroundColor: '#eff6ff',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-    borderWidth: 1,
-    borderColor: '#bfdbfe',
-  },
-  notificationText: {
-    fontFamily: 'OnestBold',
-    fontSize: 9,
-    color: '#1d4ed8',
-  },
   tileDescSubText: {
     fontFamily: 'OnestLight',
     fontSize: 11.5,
     color: '#64748b',
     paddingRight: 8,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(17, 0, 35, 0.4)',
+    justifyContent: 'flex-end',
+  },
+  modalSheet: {
+    backgroundColor: '#ffffff',
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    padding: 24,
+    paddingBottom: 34,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 20,
+  },
+  modalHeaderTitle: {
+    fontFamily: 'OnestBold',
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#110023',
+  },
+  closeButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#f8fafc',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  inputLabel: {
+    fontFamily: 'OnestBold',
+    fontSize: 12,
+    color: '#64748b',
+    marginBottom: 6,
+    marginTop: 12,
+  },
+  textInput: {
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontFamily: 'OnestNormal',
+    fontSize: 14,
+    color: '#110023',
+    backgroundColor: '#fafafa',
+  },
+  bioInput: {
+    minHeight: 80,
+    textAlignVertical: 'top',
+  },
+  saveButton: {
+    marginTop: 24,
+    height: 52,
+    borderRadius: 16,
+    backgroundColor: '#110023',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  saveButtonText: {
+    color: '#ffffff',
+    fontFamily: 'OnestBold',
+    fontSize: 14,
   },
 });

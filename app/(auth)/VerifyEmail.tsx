@@ -1,8 +1,9 @@
 import { useVerify } from "@/features/auth/hooks/useVerify";
 
 import { Ionicons } from "@expo/vector-icons";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import React, { useRef, useState } from "react";
+import { useAuth } from "@/providers/AuthProvider";
 import {
     KeyboardAvoidingView,
     Platform,
@@ -22,6 +23,8 @@ const VerifyEmail = () => {
   const [userCode, setCode] = useState(["", "", "", ""]);
   const [isResending, setIsResending] = useState(false);
   const {mutate, isPending, error} = useVerify()
+  const { email } = useLocalSearchParams<{ email?: string }>();
+  const { login } = useAuth();
   // Create refs to automatically jump focus forward/backward between inputs
   const inputs = useRef<Array<TextInput | null>>([]);
 
@@ -50,11 +53,12 @@ const VerifyEmail = () => {
       toast.error("Incomplete Code", "Please enter the full 4-digit code sent to your email.");
       return;
     }
-    console.log("Verifying code:", code);
     mutate(code , {
-        onSuccess: (data) => {
-            handleApiSuccess(data, "Email verified succesfully" );
-          router.push("/(tabs)");
+        onSuccess: async (data) => {
+            handleApiSuccess(data, "Email verified successfully");
+            const { accessToken, refreshToken } = data.data;
+            await login(accessToken, refreshToken);
+            router.replace("/(tabs)");
         }, onError:handleApiError
     });
   };
@@ -95,7 +99,7 @@ const VerifyEmail = () => {
 
             <Text style={styles.title}>Verify your Email</Text>
             <Text style={styles.subtitle}>
-              We've sent a 4-digit security token code to your inbox. Please enter it below.
+              We've sent a 4-digit security token code {email ? `to ${email}` : "to your inbox"}. Please enter it below.
             </Text>
 
             {/* Row of 4 Distinct OTP Square Inputs */}

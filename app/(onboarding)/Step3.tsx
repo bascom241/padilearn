@@ -7,8 +7,14 @@ import {
   ImageBackground,
 } from "react-native";
 import { router } from "expo-router";
+import { setHasSeenOnboarding } from "@/utils/tokenService";
 
 const Step3 = () => {
+  const handleStart = async () => {
+    await setHasSeenOnboarding();
+    router.replace("/(auth)/Login");
+  };
+
   const fade = useRef(new Animated.Value(0)).current;
   const slide = useRef(new Animated.Value(30)).current;
   const buttonScale = useRef(new Animated.Value(0.6)).current;
@@ -71,7 +77,7 @@ const Step3 = () => {
       >
         <TouchableOpacity
           style={styles.button}
-          onPress={() => router.replace("/(auth)/Login")}
+          onPress={handleStart}
         >
           <Text style={styles.buttonText}>Start</Text>
         </TouchableOpacity>

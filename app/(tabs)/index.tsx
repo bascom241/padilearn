@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { StyleSheet, Text, View, ScrollView, Dimensions, NativeSyntheticEvent, NativeScrollEvent, ImageBackground, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { User, Bell, GraduationCap, ShieldCheck, Bookmark, Video, BookOpen, Calendar, HelpCircle, MessageSquare, Award, TrendingUp } from "lucide-react-native";
+import { User, Bell, GraduationCap, ShieldCheck, Bookmark, Video, BookOpen, Calendar, HelpCircle, MessageSquare, Award, TrendingUp , Bot} from "lucide-react-native";
 // Imported Gifted Line Chart Engine Component
 import { LineChart } from "react-native-gifted-charts";
 // Imported Router Hook for clean workspace transitions
@@ -46,7 +46,7 @@ const HomeScreen = () => {
   ];
 
   const quickActions: QuickActionItem[] = [
-    { label: "Live Class", Icon: Video, bg: '#ff8a00', path: null },
+    { label: "Padi AI", Icon: Bot, bg: '#110023', path: "/padiAi" },
     { label: "Courses", Icon: BookOpen, bg: '#22c55e', path: null },
     { label: "Timetable", Icon: Calendar, bg: '#0ea5e9', path: null },
     { label: "Support", Icon: HelpCircle, bg: '#a855f7', path: null },

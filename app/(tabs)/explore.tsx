@@ -1,16 +1,32 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text, View, ScrollView, TouchableOpacity, TextInput, Dimensions, Modal } from 'react-native';
+import { StyleSheet, Text, View, ScrollView, TouchableOpacity, TextInput, Dimensions, Modal, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Search, MessageCircle, Repeat2, Heart, Share, Radio, BadgeCheck, Sparkles, Sliders, Plus, Mic, X, Code2, Layers, Cpu } from 'lucide-react-native';
+import { Search, MessageCircle, Repeat2, Heart, Share, Radio, Sparkles, Sliders, Plus, Mic, X, Layers } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
+import { useWorkshops } from '@/features/workshops/hooks/useWorkshops';
+import { useCreateAndStartWorkshop } from '@/features/workshops/hooks/useCreateAndStartWorkshop';
+import { useFeed } from '@/features/posts/hooks/useFeed';
+import { useCreatePost } from '@/features/posts/hooks/useCreatePost';
+import { useToggleLike, useToggleRetweet } from '@/features/posts/hooks/useToggleReaction';
+import { handleApiError } from '@/utils/handleApiError';
+
+const formatRelativeTime = (isoDate: string) => {
+  const diffMs = Date.now() - new Date(isoDate).getTime();
+  const minutes = Math.floor(diffMs / 60000);
+  if (minutes < 1) return 'now';
+  if (minutes < 60) return `${minutes}m`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h`;
+  const days = Math.floor(hours / 24);
+  return `${days}d`;
+};
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 export default function TwitterExploreScreen() {
   const router = useRouter();
   const [currentTab, setCurrentTab] = useState<'for-you' | 'spaces'>('for-you');
-  const [likedPosts, setLikedPosts] = useState<string[]>([]);
-  
+
   // Modal Controllers
   const [postModalVisible, setPostModalVisible] = useState(false);
   const [spaceModalVisible, setSpaceModalVisible] = useState(false);
@@ -22,53 +38,21 @@ export default function TwitterExploreScreen() {
 
   const CHARACTER_LIMIT = 280;
 
-  // Algorithmic Micro-Post Feed
-  const feedPosts = [
-    {
-      id: 'post-1',
-      author: {
-        name: "Engr. Abdulwahab",
-        handle: "abdul_infra",
-        avatarBg: "#11002315",
-        isVerified: true
-      },
-      content: "Just handled a critical race condition edge-case inside the Paystack wallet routing architecture. Standard DB locks were bottlenecking concurrent requests—dropped in a dynamic pessimistic write-lock loop instead. Decimal precision is now pristine. 🧵 👇",
-      timestamp: "2h",
-      tag: "#backend #infra",
-      metrics: { replies: 14, retweets: 42, likes: 189 },
-      postTimestampText:"01/5/2025"
-    },
-    {
-      id: 'post-2',
-      author: {
-        name: "Tunde NextDev",
-        handle: "tunde_codes",
-        avatarBg: "#15803d15",
-        isVerified: false
-      },
-      content: "Are we breaking our landing page layout components at precise responsive boundaries, or are we just relying on standard flex-wrap guesswork? Minimalist high-end UI demands strict adherence to the original Figma breaking points. Don't compromise on the typography break layouts.",
-      timestamp: "4h",
-      tag: "#uiux #designsystem",
-      metrics: { replies: 8, retweets: 12, likes: 64 },
-      postTimestampText:"12/12/2026"
-    }
-  ];
+  const { data: feedData, isLoading: isLoadingFeed } = useFeed();
+  const feedPosts = feedData?.posts ?? [];
+  const createPost = useCreatePost();
+  const toggleLikeMutation = useToggleLike();
+  const toggleRetweetMutation = useToggleRetweet();
 
-  const liveSpaces = [
-    {
-      id: 'space-1',
-      title: "How To Break Into AI Engineering 🚀",
-      host: "Engr. Abdulwahab",
-      listeningCount: "412 listening",
-      speakers: ["abdul_infra", "dev_chloe", "tunde_codes"],
-      isLive: true
-    }
-  ];
+  const { data: liveWorkshops, isLoading: isLoadingWorkshops } = useWorkshops('live');
+  const createAndStartWorkshop = useCreateAndStartWorkshop();
 
   const toggleLike = (postId: string) => {
-    setLikedPosts(prev => 
-      prev.includes(postId) ? prev.filter(id => id !== postId) : [...prev, postId]
-    );
+    toggleLikeMutation.mutate(postId);
+  };
+
+  const toggleRetweet = (postId: string) => {
+    toggleRetweetMutation.mutate(postId);
   };
 
   const handleFabPress = () => {
@@ -131,84 +115,101 @@ export default function TwitterExploreScreen() {
         </View>
 
         {/* 3. Live Audio Spaces Section Loop */}
-        {liveSpaces.map((space) => (
-          <TouchableOpacity 
-            key={space.id} 
-            style={styles.spaceAudioCard}
-            onPress={() => router.push({ pathname: "/chat/[id]", params: { id: space.id, title: space.title } })}
-            activeOpacity={0.9}
-          >
-            <View style={styles.spaceTopRow}>
-              <View style={styles.liveBadgeWrapper}>
-                <Radio size={12} color="#ffffff" style={{ marginRight: 4 }} />
-                <Text style={styles.liveBadgeText}>LIVE NOW</Text>
+        {currentTab === 'spaces' && isLoadingWorkshops && (
+          <ActivityIndicator color="#110023" style={{ marginTop: 20 }} />
+        )}
+        {(liveWorkshops ?? []).map((workshop) => {
+          const hostName = typeof workshop.host === 'object' ? workshop.host.fullName : 'Instructor';
+          return (
+            <TouchableOpacity
+              key={workshop._id}
+              style={styles.spaceAudioCard}
+              onPress={() => router.push({ pathname: "/workshops/[id]", params: { id: workshop._id } })}
+              activeOpacity={0.9}
+            >
+              <View style={styles.spaceTopRow}>
+                <View style={styles.liveBadgeWrapper}>
+                  <Radio size={12} color="#ffffff" style={{ marginRight: 4 }} />
+                  <Text style={styles.liveBadgeText}>LIVE NOW</Text>
+                </View>
               </View>
-              <Text style={styles.listeningMetricText}>{space.listeningCount}</Text>
-            </View>
 
-            <Text style={styles.spaceTitleText}>{space.title}</Text>
-            
-            <View style={styles.spaceFooterContainer}>
-              <View style={styles.avatarClusterRow}>
-                {space.speakers.map((item, idx) => (
-                  <View key={idx} style={[styles.clusterCircle, { marginLeft: idx === 0 ? 0 : -10, backgroundColor: idx === 0 ? '#110023' : '#64748b' }]}>
-                    <Text style={styles.clusterCircleText}>{item[0].toUpperCase()}</Text>
+              <Text style={styles.spaceTitleText}>{workshop.title}</Text>
+
+              <View style={styles.spaceFooterContainer}>
+                <View style={styles.avatarClusterRow}>
+                  <View style={[styles.clusterCircle, { backgroundColor: '#110023' }]}>
+                    <Text style={styles.clusterCircleText}>{hostName[0]?.toUpperCase()}</Text>
                   </View>
-                ))}
-                <Text style={styles.hostLabelMetaText}>Hosted by @{space.host}</Text>
+                  <Text style={styles.hostLabelMetaText}>Hosted by {hostName}</Text>
+                </View>
+
+                <View style={styles.joinSpacePillButton}>
+                  <Text style={styles.joinButtonText}>Listen In</Text>
+                </View>
               </View>
-              
-              <View style={styles.joinSpacePillButton}>
-                <Text style={styles.joinButtonText}>Listen In</Text>
-              </View>
-            </View>
-          </TouchableOpacity>
-        ))}
+            </TouchableOpacity>
+          );
+        })}
 
         {/* 4. Post Timeline Stream Grid */}
+        {currentTab === 'for-you' && isLoadingFeed && (
+          <ActivityIndicator color="#110023" style={{ marginTop: 20 }} />
+        )}
+
+        {currentTab === 'for-you' && !isLoadingFeed && feedPosts.length === 0 && (
+          <View style={styles.emptyStateContainerBlock}>
+            <Sparkles size={24} color="#94a3b8" style={{ marginBottom: 8 }} />
+            <Text style={styles.emptyStateHeadingText}>No posts yet</Text>
+            <Text style={styles.emptyStateParagraph}>Be the first to share something with your cohort.</Text>
+          </View>
+        )}
+
         {currentTab === 'for-you' && feedPosts.map((post) => {
-          const isPostLiked = likedPosts.includes(post.id);
           return (
-            <View key={post.id} style={styles.tweetContainerRow}>
+            <View key={post._id} style={styles.tweetContainerRow}>
               <View style={styles.tweetLeftColumn}>
-                <View style={[styles.userProfileAvatar, { backgroundColor: post.author.avatarBg }]}>
-                  <Text style={styles.avatarProfileChar}>{post.author.name[0]}</Text>
+                <View style={[styles.userProfileAvatar, { backgroundColor: '#11002315' }]}>
+                  <Text style={styles.avatarProfileChar}>{post.author.fullName[0]}</Text>
                 </View>
               </View>
 
               <View style={styles.tweetRightColumn}>
                 <View style={styles.tweetHeaderMetaRow}>
                   <View style={styles.nameContainerGroup}>
-                    <Text numberOfLines={1} style={styles.profileDisplayName}>{post.author.name}</Text>
-                    {post.author.isVerified && <BadgeCheck size={15} color="#110023" fill="#110023" style={{ marginRight: 4 }} />}
-                    <Text numberOfLines={1} style={styles.userHandleText}>@{post.author.handle}</Text>
+                    <Text numberOfLines={1} style={styles.profileDisplayName}>{post.author.fullName}</Text>
                     <Text style={styles.dotSeparator}>·</Text>
-                    <Text style={styles.postTimestampText}>{post.postTimestampText || post.timestamp}</Text>
+                    <Text style={styles.postTimestampText}>{formatRelativeTime(post.createdAt)}</Text>
                   </View>
                 </View>
 
                 <Text style={styles.tweetCoreContentText}>
-                  {post.content} <Text style={[styles.tweetInlineHyperlink, { color: '#110023' }]}>{post.tag}</Text>
+                  {post.content} {post.tag && <Text style={[styles.tweetInlineHyperlink, { color: '#110023' }]}>{post.tag}</Text>}
                 </Text>
 
                 <View style={styles.tweetActionEngagementBar}>
                   <TouchableOpacity style={styles.actionEngagementNode}>
                     <MessageCircle size={15} color="#64748b" />
-                    <Text style={styles.actionMetricNumberLabel}>{post.metrics.replies}</Text>
+                    <Text style={styles.actionMetricNumberLabel}>{post.repliesCount}</Text>
                   </TouchableOpacity>
 
-                  <TouchableOpacity style={styles.actionEngagementNode}>
-                    <Repeat2 size={16} color="#64748b" />
-                    <Text style={styles.actionMetricNumberLabel}>{post.metrics.retweets}</Text>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity 
-                    style={styles.actionEngagementNode} 
-                    onPress={() => toggleLike(post.id)}
+                  <TouchableOpacity
+                    style={styles.actionEngagementNode}
+                    onPress={() => toggleRetweet(post._id)}
                   >
-                    <Heart size={15} color={isPostLiked ? "#ef4444" : "#64748b"} fill={isPostLiked ? "#ef4444" : "transparent"} />
-                    <Text style={[styles.actionMetricNumberLabel, isPostLiked && { color: "#ef4444" }]}>
-                      {isPostLiked ? post.metrics.likes + 1 : post.metrics.likes}
+                    <Repeat2 size={16} color={post.isRetweetedByMe ? "#15803d" : "#64748b"} />
+                    <Text style={[styles.actionMetricNumberLabel, post.isRetweetedByMe && { color: "#15803d" }]}>
+                      {post.retweetsCount}
+                    </Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.actionEngagementNode}
+                    onPress={() => toggleLike(post._id)}
+                  >
+                    <Heart size={15} color={post.isLikedByMe ? "#ef4444" : "#64748b"} fill={post.isLikedByMe ? "#ef4444" : "transparent"} />
+                    <Text style={[styles.actionMetricNumberLabel, post.isLikedByMe && { color: "#ef4444" }]}>
+                      {post.likesCount}
                     </Text>
                   </TouchableOpacity>
 
@@ -221,11 +222,11 @@ export default function TwitterExploreScreen() {
           );
         })}
 
-        {currentTab === 'spaces' && (
+        {currentTab === 'spaces' && !isLoadingWorkshops && (liveWorkshops ?? []).length === 0 && (
           <View style={styles.emptyStateContainerBlock}>
             <Sparkles size={24} color="#94a3b8" style={{ marginBottom: 8 }} />
-            <Text style={styles.emptyStateHeadingText}>No other live spaces found</Text>
-            <Text style={styles.emptyStateParagraph}>When engineering teams host open mic reviews or design teardowns, they will pop up live right here.</Text>
+            <Text style={styles.emptyStateHeadingText}>No live workshops right now</Text>
+            <Text style={styles.emptyStateParagraph}>When instructors host live sessions or Q&As, they will pop up live right here.</Text>
           </View>
         )}
 
@@ -265,20 +266,31 @@ export default function TwitterExploreScreen() {
                 ]}>
                   {CHARACTER_LIMIT - newPostText.length}
                 </Text>
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={[
-                    styles.publishSubmitPill, 
+                    styles.publishSubmitPill,
                     { backgroundColor: '#110023' },
-                    newPostText.trim().length === 0 && { opacity: 0.5 }
+                    (newPostText.trim().length === 0 || createPost.isPending) && { opacity: 0.5 }
                   ]}
-                  disabled={newPostText.trim().length === 0}
+                  disabled={newPostText.trim().length === 0 || createPost.isPending}
                   onPress={() => {
-                    console.log('Publish Data:', { content: newPostText, tag: selectedTag });
-                    setNewPostText('');
-                    setPostModalVisible(false);
+                    createPost.mutate(
+                      { content: newPostText.trim(), tag: selectedTag },
+                      {
+                        onSuccess: () => {
+                          setNewPostText('');
+                          setPostModalVisible(false);
+                        },
+                        onError: handleApiError,
+                      },
+                    );
                   }}
                 >
-                  <Text style={styles.publishButtonText}>Publish</Text>
+                  {createPost.isPending ? (
+                    <ActivityIndicator color="#ffffff" size="small" />
+                  ) : (
+                    <Text style={styles.publishButtonText}>Publish</Text>
+                  )}
                 </TouchableOpacity>
               </View>
             </View>
@@ -364,16 +376,35 @@ export default function TwitterExploreScreen() {
                 Launching this session broadcasts an instant live-microphone open audio workspace invite to your technical cohort.
               </Text>
 
-              <TouchableOpacity 
-                style={[styles.launchLiveSessionButtonPill, { backgroundColor: '#110023' }]}
+              <TouchableOpacity
+                style={[
+                  styles.launchLiveSessionButtonPill,
+                  { backgroundColor: '#110023' },
+                  (newSpaceTitle.trim().length === 0 || createAndStartWorkshop.isPending) && { opacity: 0.5 },
+                ]}
+                disabled={newSpaceTitle.trim().length === 0 || createAndStartWorkshop.isPending}
                 onPress={() => {
-                  console.log('Launch Space Room Title:', newSpaceTitle);
-                  setNewSpaceTitle('');
-                  setSpaceModalVisible(false);
+                  createAndStartWorkshop.mutate(
+                    { title: newSpaceTitle.trim(), description: `Live session: ${newSpaceTitle.trim()}` },
+                    {
+                      onSuccess: (workshop) => {
+                        setNewSpaceTitle('');
+                        setSpaceModalVisible(false);
+                        router.push({ pathname: '/workshops/[id]', params: { id: workshop._id } });
+                      },
+                      onError: handleApiError,
+                    },
+                  );
                 }}
               >
-                <Mic size={16} color="#ffffff" style={{ marginRight: 6 }} />
-                <Text style={styles.actionButtonLabelText}>Start Live Session</Text>
+                {createAndStartWorkshop.isPending ? (
+                  <ActivityIndicator color="#ffffff" />
+                ) : (
+                  <>
+                    <Mic size={16} color="#ffffff" style={{ marginRight: 6 }} />
+                    <Text style={styles.actionButtonLabelText}>Start Live Session</Text>
+                  </>
+                )}
               </TouchableOpacity>
             </View>
           </SafeAreaView>

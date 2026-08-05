@@ -29,7 +29,7 @@ const Register = () => {
     }
 
     const handleSuccess = () => {
-        router.push("/(auth)/VerifyEmail")
+        router.push({ pathname: "/(auth)/VerifyEmail", params: { email: formData.email } })
     }
 
     const handleSubmit = () => {

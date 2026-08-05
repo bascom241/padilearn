@@ -7,4 +7,3 @@ export const useGetProfile = () => {
         queryFn: getProfile // Invalidated during profile update, account suspension and deletion
     })
 }
-

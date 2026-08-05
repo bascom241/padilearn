@@ -40,7 +40,14 @@
         }
       ],
       "expo-font",
-      "expo-secure-store"
+      "expo-secure-store",
+      "expo-video",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Padi Learn uses your photo library to let you set a profile avatar."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

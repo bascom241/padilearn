@@ -4,7 +4,9 @@ import { Stack } from 'expo-router';
 const Onboarding = () => {
     return (
        <Stack screenOptions={{headerShown: false}}>
-        <Stack.Screen name='(onboarding)' options={{headerShown:false}}/>
+        <Stack.Screen name='Step1'/>
+        <Stack.Screen name='Step2'/>
+        <Stack.Screen name='Step3'/>
        </Stack>
     );
 }

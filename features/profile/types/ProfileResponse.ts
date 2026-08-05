@@ -1,6 +1,15 @@
+export interface ProfileStats {
+    coursesEnrolled: number;
+    coursesCompleted: number;
+    learningHoursLogged: number;
+}
+
 export interface ProfileResponse {
-    id:string
     fullName: string
-    email?: string
-    isVerified?:string 
+    email: string
+    role: string
+    isEmailSent: boolean
+    bio?: string
+    avatarUrl?: string
+    stats?: ProfileStats
 }

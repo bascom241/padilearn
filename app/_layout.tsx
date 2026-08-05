@@ -6,6 +6,7 @@ import { useFonts } from "expo-font"
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { QueryClient, QueryClientProvider, focusManager } from "@tanstack/react-query"
 import QueryProvider from '@/providers/QueryProvider';
+import { AuthProvider } from '@/providers/AuthProvider';
 import Toast from "react-native-toast-message"
 export const unstable_settings = {
   anchor: '(tabs)',
@@ -48,19 +49,23 @@ export default function RootLayout() {
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <QueryProvider >
+      <AuthProvider>
+        <QueryProvider >
 
 
-        <Stack>
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
-          <Stack.Screen name='index' options={{ headerShown: false }} />
-          <Stack.Screen name="(onboarding)" options={{ headerShown: false }} />
-          <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-          <Stack.Screen name='courses' options={{ headerShown: false }} />
-          <Stack.Screen name='chat' options={{ headerShown: false }} />
-        </Stack>
-      </QueryProvider>
+          <Stack>
+            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+            <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
+            <Stack.Screen name='index' options={{ headerShown: false }} />
+            <Stack.Screen name="(onboarding)" options={{ headerShown: false }} />
+            <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+            <Stack.Screen name='courses' options={{ headerShown: false }} />
+            <Stack.Screen name='workshops' options={{ headerShown: false }} />
+            <Stack.Screen name='chat' options={{ headerShown: false }} />
+            <Stack.Screen name='padiAi' options={{headerShown: false}}/>
+          </Stack>
+        </QueryProvider>
+      </AuthProvider>
       <StatusBar style="auto" />
       <Toast />
     </ThemeProvider>

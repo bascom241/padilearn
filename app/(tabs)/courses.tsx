@@ -1,80 +1,62 @@
-import React, { useState } from 'react';
-import { StyleSheet, Text, View, ScrollView, TextInput, TouchableOpacity, Modal, Pressable } from 'react-native';
+import React, { useMemo, useState } from 'react';
+import { StyleSheet, Text, View, ScrollView, TextInput, TouchableOpacity, Modal, Pressable, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Search, SlidersHorizontal, ArrowLeft, GraduationCap, X } from 'lucide-react-native';
 import CourseCard from '@/components/cards/Courses';
 import { useRouter } from 'expo-router';
+import { useCourses } from '@/features/courses/hooks/useCourses';
+import type { CourseSummary } from '@/features/courses/types/Course';
+
+const formatPrice = (price: number) => (price === 0 ? 'Free' : `₦${price.toLocaleString()}`);
+const capitalize = (value: string) => value.charAt(0).toUpperCase() + value.slice(1);
+
 const Courses = () => {
-    const [activeCategory, setActiveCategory] = useState('All Sprints');
+    const [activeCategory, setActiveCategory] = useState('All');
     const [isFilterVisible, setIsFilterVisible] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
 
     // Filter States
     const [selectedLevel, setSelectedLevel] = useState('All Levels');
     const [selectedPrice, setSelectedPrice] = useState('All');
-    const router = useRouter(); 
-    const categories = ['All Sprints', 'Tech Architecture', 'Vocational Experts', 'UI/UX Systemic'];
-    const levels = ['All Levels', 'Beginner', 'Intermediate', 'Advanced', 'Expert'];
+    const router = useRouter();
+    const levels = ['All Levels', 'Beginner', 'Intermediate', 'Advanced'];
     const priceTiers = ['All', 'Free', 'Paid'];
 
-    const mockCourses = [
-        {
-            title: "Advanced Next.js & Production Architecture",
-            category: "TECH SPRINT",
-            lessons: 24,
-            duration: "18.5 hrs",
-            rating: 4.9,
-            level: "Advanced",
-            price: "Free",
-            progress: 0.65,
-            image: require('../../assets/images/card1.jpg')
-        },
-        {
-            title: "High-End Micro-Interactions & Figma to Code workflows",
-            category: "UI/UX SYSTEMIC",
-            lessons: 16,
-            duration: "12.2 hrs",
-            rating: 5.0,
-            level: "Intermediate",
-            price: "$29",
-            progress: 0.15,
-            image: require('../../assets/images/card2.jpg')
-        },
-        {
-            title: "Spring Boot Enterprise Infrastructure & State Locking",
-            category: "TECH SPRINT",
-            lessons: 32,
-            duration: "26 hrs",
-            rating: 4.8,
-            level: "Advanced",
-            price: "$49",
-            progress: 0.82,
-            image: require('../../assets/images/card1.jpg')
-        }
-    ];
+    const { data, isLoading, isError } = useCourses({
+        search: searchQuery || undefined,
+        level: selectedLevel === 'All Levels' ? undefined : selectedLevel.toLowerCase(),
+        isPublished: true, // published-only browsing
+    });
+
+    const courses = data?.courses ?? [];
+
+    const categories = useMemo(() => {
+        const unique = Array.from(new Set(courses.map((c) => c.category)));
+        return ['All', ...unique];
+    }, [courses]);
+
+    const filteredCourses = useMemo(() => {
+        return courses.filter((course) => {
+            const matchesCategory = activeCategory === 'All' || course.category === activeCategory;
+            const matchesPrice =
+                selectedPrice === 'All' ||
+                (selectedPrice === 'Free' && course.price === 0) ||
+                (selectedPrice === 'Paid' && course.price > 0);
+            return matchesCategory && matchesPrice;
+        });
+    }, [courses, activeCategory, selectedPrice]);
 
     const handleResetFilters = () => {
         setSelectedLevel('All Levels');
         setSelectedPrice('All');
     };
 
-    const handleCoursePress = (course: any) => {
-    const courseId = course.id ?? String(course.title ?? 'course').replace(/\s+/g, '-').toLowerCase();
-
-    router.push({
-        pathname: '/courses/[id]', // Points to your course detail file
-        params: {
-            id: courseId,
-            title: course.title,
-            category: course.category,
-            lessons: course.lessons,
-            duration: course.duration,
-            rating: course.rating,
-            level: course.level,
-            price: course.price,
-            // Pass remote images via string URI or handle asset require references carefully
-        }
-    });
-};
+    const handleCoursePress = (course: CourseSummary) => {
+        router.push({
+            pathname: '/courses/[id]',
+            params: { id: course._id },
+        });
+    };
 
     return (
         <SafeAreaView style={styles.container}>
@@ -102,6 +84,8 @@ const Courses = () => {
                             placeholder="Search ongoing cohorts..."
                             placeholderTextColor="#94a3b8"
                             style={styles.inputField}
+                            value={searchQuery}
+                            onChangeText={setSearchQuery}
                         />
                     </View>
                 </View>
@@ -134,7 +118,9 @@ const Courses = () => {
                 <View style={styles.trackOverviewPanel}>
                     <View style={styles.panelLeft}>
                         <Text style={styles.panelTitle}>Sprint Status Overview</Text>
-                        <Text style={styles.panelSubtitle}>You are managing 3 active tracks cleanly.</Text>
+                        <Text style={styles.panelSubtitle}>
+                            {isLoading ? "Loading cohorts..." : `${filteredCourses.length} available cohorts`}
+                        </Text>
                     </View>
                     <View style={styles.panelBadge}>
                         <GraduationCap size={18} color="#ffffff" />
@@ -144,8 +130,26 @@ const Courses = () => {
                 {/* Courses Cards Iterative Component Node Render stack */}
                 <View style={styles.listSection}>
                     <Text style={styles.sectionLabel}>Active Cohorts</Text>
-                    {mockCourses.map((course, idx) => (
-                        <CourseCard key={idx} course={course} onPress={() => handleCoursePress(course)} />
+                    {isLoading && <ActivityIndicator color="#110023" style={{ marginTop: 20 }} />}
+                    {isError && <Text style={styles.emptyText}>Could not load courses. Pull to refresh.</Text>}
+                    {!isLoading && !isError && filteredCourses.length === 0 && (
+                        <Text style={styles.emptyText}>No courses match your filters yet.</Text>
+                    )}
+                    {filteredCourses.map((course) => (
+                        <CourseCard
+                            key={course._id}
+                            course={{
+                                title: course.title,
+                                category: course.category,
+                                lessons: undefined,
+                                duration: undefined,
+                                rating: undefined,
+                                level: capitalize(course.level),
+                                price: formatPrice(course.price),
+                                image: { uri: course.thumbnail },
+                            }}
+                            onPress={() => handleCoursePress(course)}
+                        />
                     ))}
                 </View>
             </ScrollView>
@@ -375,6 +379,13 @@ const styles = StyleSheet.create({
         color: '#110023',
         marginBottom: 14,
         letterSpacing: -0.1,
+    },
+    emptyText: {
+        fontFamily: 'OnestLight',
+        fontSize: 13,
+        color: '#64748b',
+        textAlign: 'center',
+        marginTop: 20,
     },
 
     /* Filter Sheet Layout Specs */

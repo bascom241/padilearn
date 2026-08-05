@@ -8,8 +8,14 @@ import {
   ImageBackground,
   View,
 } from "react-native";
+import { setHasSeenOnboarding } from "@/utils/tokenService";
 
 const Step2 = () => {
+  const handleSkip = async () => {
+    await setHasSeenOnboarding();
+    router.replace("/(auth)/Login");
+  };
+
   const fade = useRef(new Animated.Value(0)).current;
   const slide = useRef(new Animated.Value(40)).current; // bottom -> up
   const buttonScale = useRef(new Animated.Value(0.5)).current;
@@ -64,7 +70,9 @@ const Step2 = () => {
         </Text>
       </Animated.View>
 
-      <Text style={styles.skip}>Skip</Text>
+      <TouchableOpacity style={styles.skipButton} onPress={handleSkip}>
+        <Text style={styles.skip}>Skip</Text>
+      </TouchableOpacity>
 
       <Animated.View
         style={[
@@ -115,10 +123,13 @@ const styles = StyleSheet.create({
     fontFamily: "OnestNormal",
   },
 
-  skip: {
+  skipButton: {
     position: "absolute",
     bottom: 42,
     left: 30,
+    padding: 4,
+  },
+  skip: {
     fontFamily: "OnestNormal",
   },
 
