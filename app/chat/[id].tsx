@@ -1,59 +1,153 @@
-import React, { useState } from 'react';
-import { StyleSheet, Text, View, FlatList, TextInput, KeyboardAvoidingView, Platform, TouchableOpacity, Image } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { StyleSheet, Text, View, FlatList, TextInput, KeyboardAvoidingView, Platform, TouchableOpacity, Image, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ArrowLeft, Send, Image as ImageIcon, Code, MessageSquare, Users } from 'lucide-react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import { padiAiService } from '@/features/chat/services/padiAiService';
+import { joinConversation, leaveConversation, subscribeToIncomingMessages } from '@/features/chat/services/socket/chat.socket';
+import type { ChatMessage } from '@/features/chat/types/chat.types';
 
 const ChatRoom = () => {
   const router = useRouter();
   const params = useLocalSearchParams();
   const [typedMessage, setTypedMessage] = useState('');
+  const [messageStack, setMessageStack] = useState<ChatMessage[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const flatListRef = useRef<FlatList>(null);
+  const conversationId = params.id as string;
 
   const activeChannel = {
-    title: (params.title as string) || "Next.js Core Cohort",
-    memberCount: "142 Active Devs"
+    title: (params.title as string) || "PadiAI Chat",
+    memberCount: "AI Assistant"
   };
 
-  const [messageStack, setMessageStack] = useState([
-    {
-      id: '1',
-      sender: 'Senior Dev Tunde',
-      text: 'Make sure you guys handle race conditions elegantly using dynamic locking methods in your Spring backend before launching tomorrow.',
-      timestamp: '11:24 AM',
-      isMe: false,
-      role: 'Mentor'
-    },
-    {
-      id: '2',
-      sender: 'You',
-      text: 'Got it. Handled decimal precision issues inside the Paystack transaction payload matrix as well.',
-      timestamp: '11:26 AM',
-      isMe: true,
-      role: 'Student'
-    },
-    {
-      id: '3',
-      sender: 'Dev Chloe',
-      text: 'Are we breaking our landing page layout at precise viewport configurations or using standard breakpoints?',
-      timestamp: '11:30 AM',
-      isMe: false,
-      role: 'Student'
-    }
-  ]);
+  useEffect(() => {
+    loadMessages();
+    joinConversation(conversationId);
 
-  const sendMessage = () => {
-    if (!typedMessage.trim()) return;
-    const newMsg = {
-      id: String(messageStack.length + 1),
-      sender: 'You',
-      text: typedMessage,
-      timestamp: 'Just Now',
-      isMe: true,
-      role: 'Student'
+    // Subscribe to incoming messages
+    const unsubscribe = subscribeToIncomingMessages((message) => {
+      if (message.conversationId === conversationId) {
+        setMessageStack(prev => [...prev, {
+          id: String(Date.now()),
+          sender: 'ai',
+          content: message.message,
+          createdAt: new Date().toISOString(),
+          type: 'text'
+        }]);
+        setTimeout(() => {
+          flatListRef.current?.scrollToEnd({ animated: true });
+        }, 100);
+      }
+    });
+
+    return () => {
+      unsubscribe();
+      leaveConversation(conversationId);
     };
-    setMessageStack([...messageStack, newMsg]);
-    setTypedMessage('');
+  }, [conversationId]);
+
+  const loadMessages = async () => {
+    if (!conversationId) return;
+    try {
+      setLoading(true);
+      setError(null);
+      const messages = await padiAiService.getMessages(conversationId);
+      setMessageStack(messages);
+      // Scroll to bottom after loading
+      setTimeout(() => {
+        flatListRef.current?.scrollToEnd({ animated: true });
+      }, 100);
+    } catch (err) {
+      console.error('Failed to load messages:', err);
+      setError('Failed to load messages');
+    } finally {
+      setLoading(false);
+    }
   };
+
+  const sendMessage = async () => {
+    if (!typedMessage.trim()) return;
+    if (!conversationId) return;
+
+    const userMessage: ChatMessage = {
+      id: String(Date.now()),
+      sender: 'user',
+      content: typedMessage,
+      createdAt: new Date().toISOString(),
+      type: 'text'
+    };
+
+    try {
+      setSending(true);
+      setError(null);
+      
+      // Add user message immediately
+      setMessageStack([...messageStack, userMessage]);
+      setTypedMessage('');
+
+      // Scroll to bottom
+      setTimeout(() => {
+        flatListRef.current?.scrollToEnd({ animated: true });
+      }, 100);
+
+      // Send to API via socket
+      const response = await padiAiService.sendMessage({
+        message: userMessage.content,
+        conversationId
+      });
+
+      // Add AI response
+      const aiMessage: ChatMessage = {
+        id: String(Date.now() + 1),
+        sender: 'ai',
+        content: response.message,
+        createdAt: new Date().toISOString(),
+        type: 'text'
+      };
+
+      setMessageStack(prev => [...prev, aiMessage]);
+      
+      // Scroll to bottom
+      setTimeout(() => {
+        flatListRef.current?.scrollToEnd({ animated: true });
+      }, 100);
+    } catch (err) {
+      console.error('Failed to send message:', err);
+      setError('Failed to send message');
+      // Remove the user message if sending failed
+      setMessageStack(messageStack);
+      setTypedMessage(userMessage.content);
+    } finally {
+      setSending(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <View style={styles.headerLeft}>
+            <TouchableOpacity style={styles.backIconButton} onPress={() => router.back()} activeOpacity={0.7}>
+              <ArrowLeft size={22} color="#110023" />
+            </TouchableOpacity>
+            <View style={styles.channelMetaGroup}>
+              <Text numberOfLines={1} style={styles.channelTitle}>{activeChannel.title}</Text>
+              <View style={styles.badgeRow}>
+                <Users size={10} color="#15803d" />
+                <Text style={styles.memberText}>{activeChannel.memberCount}</Text>
+              </View>
+            </View>
+          </View>
+        </View>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#110023" />
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -71,33 +165,37 @@ const ChatRoom = () => {
             </View>
           </View>
         </View>
-        <TouchableOpacity style={styles.optionsButton} activeOpacity={0.7}>
-          <Code size={18} color="#110023" />
-        </TouchableOpacity>
       </View>
+
+      {/* Error Message */}
+      {error && (
+        <View style={styles.errorBanner}>
+          <Text style={styles.errorText}>{error}</Text>
+        </View>
+      )}
 
       {/* Message Matrix Component Stream Node */}
       <FlatList
+        ref={flatListRef}
         data={messageStack}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.chatScrollArea}
         showsVerticalScrollIndicator={false}
         renderItem={({ item }) => (
-          <View style={[styles.messageBubbleContainer, item.isMe ? styles.myBubbleAlignment : styles.peerBubbleAlignment]}>
-            {!item.isMe && (
+          <View style={[styles.messageBubbleContainer, item.sender === 'user' ? styles.myBubbleAlignment : styles.peerBubbleAlignment]}>
+            {item.sender !== 'user' && (
               <View style={styles.senderHeaderRow}>
-                <Text style={styles.senderNameText}>{item.sender}</Text>
-                {item.role === 'Mentor' && (
-                  <View style={styles.mentorTag}><Text style={styles.mentorTagText}>Staff</Text></View>
-                )}
+                <Text style={styles.senderNameText}>PadiAI</Text>
               </View>
             )}
-            <View style={[styles.bubbleBlock, item.isMe ? styles.myBubbleBlock : styles.peerBubbleBlock]}>
-              <Text style={[styles.bubbleText, item.isMe ? styles.myBubbleText : styles.peerBubbleText]}>
-                {item.text}
+            <View style={[styles.bubbleBlock, item.sender === 'user' ? styles.myBubbleBlock : styles.peerBubbleBlock]}>
+              <Text style={[styles.bubbleText, item.sender === 'user' ? styles.myBubbleText : styles.peerBubbleText]}>
+                {item.content}
               </Text>
             </View>
-            <Text style={[styles.timestampText, item.isMe ? { alignSelf: 'flex-end' } : null]}>{item.timestamp}</Text>
+            <Text style={[styles.timestampText, item.sender === 'user' ? { alignSelf: 'flex-end' } : null]}>
+              {item.createdAt ? new Date(item.createdAt).toLocaleTimeString() : 'Now'}
+            </Text>
           </View>
         )}
       />
@@ -106,26 +204,31 @@ const ChatRoom = () => {
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} keyboardVerticalOffset={8}>
         <View style={styles.inputDockContainer}>
           <View style={styles.inputInnerDock}>
-            <TouchableOpacity style={styles.dockAddonButton} activeOpacity={0.7}>
+            <TouchableOpacity style={[styles.dockAddonButton, sending && { opacity: 0.6 }]} disabled={sending} activeOpacity={0.7}>
               <ImageIcon size={20} color="#64748b" />
             </TouchableOpacity>
             
             <TextInput
-              placeholder="Message workspace..."
+              placeholder="Ask PadiAI..."
               placeholderTextColor="#94a3b8"
               value={typedMessage}
               onChangeText={setTypedMessage}
               multiline
+              editable={!sending}
               style={styles.textDockInputField}
             />
 
             <TouchableOpacity 
-              style={[styles.sendButton, !typedMessage.trim() && { opacity: 0.6 }]} 
+              style={[styles.sendButton, (!typedMessage.trim() || sending) && { opacity: 0.6 }]} 
               onPress={sendMessage}
-              disabled={!typedMessage.trim()}
+              disabled={!typedMessage.trim() || sending}
               activeOpacity={0.8}
             >
-              <Send size={16} color="#ffffff" />
+              {sending ? (
+                <ActivityIndicator size="small" color="#ffffff" />
+              ) : (
+                <Send size={16} color="#ffffff" />
+              )}
             </TouchableOpacity>
           </View>
         </View>
@@ -143,7 +246,9 @@ const styles = StyleSheet.create({
   channelTitle: { fontFamily: 'OnestBold', fontSize: 15, fontWeight: '700', color: '#110023' },
   badgeRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 1 },
   memberText: { fontFamily: 'OnestLight', fontSize: 11, color: '#15803d', fontWeight: '500' },
-  optionsButton: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#f8fafc', alignItems: 'center', justifyContent: 'center' },
+  loadingContainer: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  errorBanner: { backgroundColor: '#fee2e2', paddingHorizontal: 16, paddingVertical: 10 },
+  errorText: { color: '#dc2626', fontFamily: 'OnestLight', fontSize: 12 },
   chatScrollArea: { paddingHorizontal: 20, paddingVertical: 24, gap: 20 },
   messageBubbleContainer: { maxWidth: '82%', flexDirection: 'column' },
   myBubbleAlignment: { alignSelf: 'flex-end' },

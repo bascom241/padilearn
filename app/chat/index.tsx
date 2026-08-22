@@ -1,120 +1,109 @@
-import React, { useState } from 'react';
-import { StyleSheet, Text, View, ScrollView, TextInput, TouchableOpacity, FlatList } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { StyleSheet, Text, View, ScrollView, TextInput, TouchableOpacity, FlatList, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Search, MessageSquare, Users, MessageCircle, Hash, ChevronRight, MessageSquareText } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
-interface RoomItem {
-    id: string;
-    title: string;
-    subtitle: string;
-    unreadCount: number;
-    memberCount: string;
-    category: string;
-    time: string;
-  }
+import { padiAiService } from '@/features/chat/services/padiAiService';
+import type { AiConversation } from '@/features/chat/types/chat.types';
+
 const ChatChannelsList = () => {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
+  const [conversations, setConversations] = useState<AiConversation[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Structured high-end channels mock list
-  const activeRooms = [
-    {
-      id: 'nextjs-core',
-      title: "Next.js Core Cohort",
-      subtitle: "Senior Dev Tunde: Make sure you guys handle race conditions...",
-      unreadCount: 3,
-      memberCount: "142 Active Devs",
-      category: "TRACK CHANNELS",
-      time: "11:30 AM"
-    },
-    {
-      id: 'ui-ux-systemic',
-      title: "UI/UX Systemic Design Lab",
-      subtitle: "Dev Chloe: Are we breaking our landing page layout at precise...",
-      unreadCount: 0,
-      memberCount: "89 Members",
-      category: "TRACK CHANNELS",
-      time: "Yesterday"
-    },
-    {
-      id: 'spring-infra',
-      title: "Spring Boot Enterprise Infra",
-      subtitle: "You: Handled decimal precision issues inside the Paystack...",
-      unreadCount: 0,
-      memberCount: "64 Members",
-      category: "TRACK CHANNELS",
-      time: "Jul 5"
-    },
-    {
-      id: 'abdulwahab-mentor',
-      title: "Engr. Abdulwahab",
-      subtitle: "Your technical architectural layout review looks spot on.",
-      unreadCount: 1,
-      memberCount: "1-on-1 Mentor Workspace",
-      category: "DIRECT WORKSPACES",
-      time: "Jul 4"
+  useEffect(() => {
+    loadConversations();
+  }, []);
+
+  const loadConversations = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await padiAiService.getConversations();
+      setConversations(data);
+    } catch (err) {
+      console.error('Failed to load conversations:', err);
+      setError('Failed to load conversations');
+    } finally {
+      setLoading(false);
     }
-  ];
+  };
 
-  const handleRoomPress = (room: RoomItem) => {
+  const handleRoomPress = (conversation: AiConversation) => {
     router.push({
       pathname: "/chat/[id]",
-      params: { id: room.id, title: room.title }
+      params: { id: conversation._id, title: conversation.title }
     });
   };
 
-  // Group items smoothly by their category headers
-  const renderRoomItem = ({ item }: { item: typeof activeRooms[0] }) => (
+  const renderRoomItem = ({ item }: { item: AiConversation }) => (
     <TouchableOpacity 
       style={styles.roomRowCard} 
       onPress={() => handleRoomPress(item)}
       activeOpacity={0.7}
     >
       <View style={styles.roomIconWrapper}>
-        {item.category === 'DIRECT WORKSPACES' ? (
-          <MessageCircle size={20} color="#110023" />
-        ) : (
-          <Hash size={20} color="#230444" />
-        )}
+        <MessageCircle size={20} color="#110023" />
       </View>
 
       <View style={styles.roomMetaBlock}>
         <View style={styles.roomMetaTopRow}>
           <Text numberOfLines={1} style={styles.roomTitleText}>{item.title}</Text>
-          <Text style={styles.timeStampText}>{item.time}</Text>
+          <Text style={styles.timeStampText}>
+            {item.updatedAt ? new Date(item.updatedAt).toLocaleDateString() : 'Now'}
+          </Text>
         </View>
 
-        <Text numberOfLines={1} style={styles.subtitleSnippet}>{item.subtitle}</Text>
+        <Text numberOfLines={1} style={styles.subtitleSnippet}>PadiAi Conversation</Text>
 
         <View style={styles.roomBottomRow}>
           <View style={styles.membersIndicator}>
-            <Users size={12} color="#64748b" />
-            <Text style={styles.memberCountText}>{item.memberCount}</Text>
+            <MessageSquare size={12} color="#64748b" />
+            <Text style={styles.memberCountText}>AI Chat</Text>
           </View>
-          
-          {item.unreadCount > 0 && (
-            <View style={styles.unreadCounterBadge}>
-              <Text style={styles.unreadCounterText}>{item.unreadCount}</Text>
-            </View>
-          )}
         </View>
       </View>
     </TouchableOpacity>
   );
 
-  // Filter items elegantly based on search inputs
-  const filteredRooms = activeRooms.filter(room => 
-    room.title.toLowerCase().includes(searchQuery.toLowerCase())
+  // Filter conversations based on search
+  const filteredConversations = conversations.filter(conv => 
+    conv.title.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <View style={styles.headerTitleGroup}>
+            <Text style={styles.headerMainTitle}>PadiAI Chat</Text>
+            <Text style={styles.headerSubtitle}>Chat with your AI assistant</Text>
+          </View>
+        </View>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#110023" />
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
       {/* Upper Global Navigation Row */}
       <View style={styles.header}>
         <View style={styles.headerTitleGroup}>
-          <Text style={styles.headerMainTitle}>Workspaces</Text>
-          <Text style={styles.headerSubtitle}>Connect with your cohort and engineering mentors</Text>
+          <Text style={styles.headerMainTitle}>PadiAI Chat</Text>
+          <Text style={styles.headerSubtitle}>Chat with your AI assistant</Text>
         </View>
+        <TouchableOpacity 
+          style={styles.newChatButton}
+          onPress={() => router.push('/chat/new')}
+          activeOpacity={0.7}
+        >
+          <MessageSquare size={18} color="#ffffff" />
+        </TouchableOpacity>
       </View>
 
       {/* Dynamic Search Box Section */}
@@ -122,7 +111,7 @@ const ChatChannelsList = () => {
         <View style={styles.searchBarContainer}>
           <Search size={18} color="#64748b" style={{ marginRight: 8 }} />
           <TextInput
-            placeholder="Search channels or active rooms..."
+            placeholder="Search conversations..."
             placeholderTextColor="#94a3b8"
             value={searchQuery}
             onChangeText={setSearchQuery}
@@ -133,15 +122,27 @@ const ChatChannelsList = () => {
 
       {/* Main Channels List Layout Node */}
       <FlatList
-        data={filteredRooms}
-        keyExtractor={(item) => item.id}
+        data={filteredConversations}
+        keyExtractor={(item) => item._id}
         renderItem={renderRoomItem}
         contentContainerStyle={styles.listContainerStyle}
         showsVerticalScrollIndicator={false}
+        onRefresh={loadConversations}
+        refreshing={loading}
         ListEmptyComponent={
           <View style={styles.emptyStateContainer}>
             <MessageSquareText size={32} color="#94a3b8" style={{ marginBottom: 8 }} />
-            <Text style={styles.emptyStateText}>No active workspaces found</Text>
+            <Text style={styles.emptyStateText}>
+              {error || 'No conversations yet. Start chatting with PadiAI!'}
+            </Text>
+            {!error && (
+              <TouchableOpacity 
+                style={styles.startButton}
+                onPress={() => router.push('/chat/new')}
+              >
+                <Text style={styles.startButtonText}>Start New Chat</Text>
+              </TouchableOpacity>
+            )}
           </View>
         }
       />
@@ -155,14 +156,18 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
   },
   header: {
+    flexDirection: 'row',
     paddingHorizontal: 20,
     paddingVertical: 14,
     borderBottomWidth: 1,
     borderBottomColor: '#f8fafc',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   headerTitleGroup: {
     flexDirection: 'column',
     gap: 2,
+    flex: 1,
   },
   headerMainTitle: {
     fontFamily: 'OnestBold',
@@ -175,6 +180,14 @@ const styles = StyleSheet.create({
     fontFamily: 'OnestLight',
     fontSize: 12,
     color: '#64748b',
+  },
+  newChatButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    backgroundColor: '#110023',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   searchSection: {
     paddingHorizontal: 20,
@@ -201,6 +214,11 @@ const styles = StyleSheet.create({
     paddingTop: 24,
     paddingBottom: 40,
   },
+  loadingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   roomRowCard: {
     flexDirection: 'row',
     backgroundColor: '#ffffff',
@@ -211,7 +229,6 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     alignItems: 'center',
     gap: 14,
-    // Soft clean minimalist shadow spec
     shadowColor: '#110023',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.02,
@@ -295,6 +312,21 @@ const styles = StyleSheet.create({
     fontFamily: 'OnestLight',
     fontSize: 13,
     color: '#64748b',
+    textAlign: 'center',
+    paddingHorizontal: 20,
+  },
+  startButton: {
+    marginTop: 20,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    backgroundColor: '#110023',
+    borderRadius: 10,
+  },
+  startButtonText: {
+    color: '#ffffff',
+    fontFamily: 'OnestBold',
+    fontSize: 14,
+    fontWeight: '700',
   },
 });
 

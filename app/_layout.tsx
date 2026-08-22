@@ -4,24 +4,12 @@ import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
 import { useFonts } from "expo-font"
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { QueryClient, QueryClientProvider, focusManager } from "@tanstack/react-query"
 import QueryProvider from '@/providers/QueryProvider';
 import { AuthProvider } from '@/providers/AuthProvider';
 import Toast from "react-native-toast-message"
 export const unstable_settings = {
   anchor: '(tabs)',
 };
-
-
-const queryClient = new QueryClient({
-  defaultOptions: { queries: { retry: 2 } }
-});
-
-queryClient.setDefaultOptions({
-  queries: {
-    networkMode: "online"
-  }
-})
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
@@ -49,10 +37,8 @@ export default function RootLayout() {
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <AuthProvider>
-        <QueryProvider >
-
-
+      <QueryProvider>
+        <AuthProvider>
           <Stack>
             <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
             <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
@@ -64,8 +50,8 @@ export default function RootLayout() {
             <Stack.Screen name='chat' options={{ headerShown: false }} />
             <Stack.Screen name='padiAi' options={{headerShown: false}}/>
           </Stack>
-        </QueryProvider>
-      </AuthProvider>
+        </AuthProvider>
+      </QueryProvider>
       <StatusBar style="auto" />
       <Toast />
     </ThemeProvider>
