@@ -16,29 +16,32 @@ import { useRegister } from "@/features/auth/hooks/useRegster";
 import { ActivityIndicator } from "react-native";
 import { handleApiError } from "@/utils/handleApiError";
 import { handleApiSuccess } from "@/utils/handleApiSuccess";
+import { useRegisterStore } from "@/features/auth/store/useRegisterStore";
 
 const Register = () => {
     const [secure, setSecure] = useState(true);
     const logo = require('../../assets/images/Padi.png');
-
-    const [formData, setFormData] = useState({ fullName: "", email: "", password: "" });
+    const {email, fullName, password, role, setField, resetForm} = useRegisterStore()
     const { mutate, error, isPending } = useRegister();
-
-    const handleChange = (fieldName: string, value: string) => {
-        setFormData({ ...formData, [fieldName]: value })
-    }
-
     const handleSuccess = () => {
-        router.push({ pathname: "/(auth)/VerifyEmail", params: { email: formData.email } })
+        router.push({ pathname: "/(auth)/VerifyEmail", params: { email } })
     }
-
     const handleSubmit = () => {
+
+        const formData = {
+            fullName, 
+            email, 
+            password, 
+            role
+        };
         mutate(formData, {
             onSuccess: (data) => {
                 handleApiSuccess(data, "Verify your email");
-                handleSuccess()
+                handleSuccess();
+                resetForm()
             }, 
             onError: handleApiError,
+
         });
     }
 
@@ -82,8 +85,8 @@ const Register = () => {
                                 placeholderTextColor="#8B8B95"
                                 style={styles.input}
                                 autoCapitalize="none"
-                                value={formData.fullName}
-                                onChangeText={(text) => handleChange("fullName", text)}
+                                value={fullName}
+                                onChangeText={(text) => setField("fullName", text)}
                             />
                         </View>
                         <View style={styles.inputWrapper}>
@@ -93,8 +96,8 @@ const Register = () => {
                                 style={styles.input}
                                 keyboardType="email-address"
                                 autoCapitalize="none"
-                                value={formData.email}
-                                onChangeText={(text) => handleChange("email", text)}
+                                value={email}
+                                onChangeText={(text) => setField("email", text)}
                             />
                         </View>
 
@@ -107,8 +110,8 @@ const Register = () => {
                                 secureTextEntry={secure}
                                 style={styles.input}
                                 autoCapitalize="none"
-                                value={formData.password}
-                                onChangeText={(text) => handleChange("password", text)}
+                                value={password}
+                                onChangeText={(text) => setField("password", text)}
 
                             />
                             <TouchableOpacity onPress={() => setSecure(!secure)}>

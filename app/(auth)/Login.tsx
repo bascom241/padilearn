@@ -124,7 +124,7 @@ const Login = () => {
 
           {/* Bottom Footer Section */}
           <View style={styles.bottomSection}>
-            <TouchableOpacity onPress={()=> router.push("/(auth)/Register")}>
+            <TouchableOpacity onPress={()=> router.push("/(auth)/Role")}>
               <Text style={styles.createAccount}>Create an account</Text>
             </TouchableOpacity>
             <Text style={styles.version}>Version 1.0.0</Text>
