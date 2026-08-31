@@ -5,47 +5,56 @@ import { router, useLocalSearchParams } from "expo-router";
 import React, { useRef, useState } from "react";
 import { useAuth } from "@/providers/AuthProvider";
 import {
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { toast } from "../../utils/toast"; // Your clean toast system
 import { handleApiSuccess } from "@/utils/handleApiSuccess";
 import { handleApiError } from "@/utils/handleApiError";
+import { useRegisterStore } from "@/features/auth/store/useRegisterStore";
+import { Role } from "@/features/auth/types/RegisterationRequestDto";
 
 const VerifyEmail = () => {
   // 1. Keep track of 4 separate digits for the verification layout
   const [userCode, setCode] = useState(["", "", "", ""]);
   const [isResending, setIsResending] = useState(false);
-  const {mutate, isPending, error} = useVerify()
+  const { mutate, isPending, error } = useVerify()
   const { email } = useLocalSearchParams<{ email?: string }>();
   const { login } = useAuth();
-  // Create refs to automatically jump focus forward/backward between inputs
+  const { role } = useRegisterStore()
+
   const inputs = useRef<Array<TextInput | null>>([]);
 
   const handleChangeText = (text: string, index: number) => {
     const newCode = [...userCode];
-    // Only capture the last character typed (handles replacements)
     newCode[index] = text.slice(-1);
     setCode(newCode);
-
-    // Auto-focus the next input box if a character was entered
     if (text && index < 3) {
       inputs.current[index + 1]?.focus();
     }
   };
 
+
   const handleKeyPress = (e: any, index: number) => {
-    // Detect backspace to jump to the previous input box cleanly
     if (e.nativeEvent.key === "Backspace" && !userCode[index] && index > 0) {
       inputs.current[index - 1]?.focus();
     }
   };
+
+
+  const handleProfileRouter = () => {
+    if (role === Role.Instructor) {
+      router.push("/(auth)/Instructor")
+    } else {
+      router.push("/(tabs)")
+    }
+  }
 
   const handleVerify = () => {
     const code = userCode.join("");
@@ -53,21 +62,22 @@ const VerifyEmail = () => {
       toast.error("Incomplete Code", "Please enter the full 4-digit code sent to your email.");
       return;
     }
-    mutate(code , {
-        onSuccess: async (data) => {
-            handleApiSuccess(data, "Email verified successfully");
-            const { accessToken, refreshToken } = data.data;
-            await login(accessToken, refreshToken);
-            router.replace("/(tabs)");
-        }, onError:handleApiError
+    mutate(code, {
+      onSuccess: async (data) => {
+        console.log(role);
+        handleApiSuccess(data, "Email verified successfully");
+        const { accessToken, refreshToken } = data.data;
+        await login(accessToken, refreshToken);
+        handleProfileRouter()
+      }, onError: handleApiError
     });
   };
+
+
 
   const handleResend = () => {
     setIsResending(true);
     toast.info("Code Sent", "A fresh verification code has been dispatched to your inbox.");
-    
-    // Simulate cooldown timer reset block
     setTimeout(() => {
       setIsResending(false);
     }, 15000);
@@ -78,12 +88,12 @@ const VerifyEmail = () => {
       behavior={Platform.OS === "ios" ? "padding" : "height"}
       style={styles.keyboardWrapper}
     >
-      <ScrollView 
+      <ScrollView
         contentContainerStyle={styles.scrollContainer}
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.container}>
-          
+
           {/* Top Left Navigation Back Action */}
           <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
             <Ionicons name="arrow-back" size={24} color="#110023" />
@@ -91,7 +101,7 @@ const VerifyEmail = () => {
 
           {/* Centralized Form Content */}
           <View style={styles.mainContent}>
-            
+
             {/* Verification Envelope Context Icon */}
             <View style={styles.iconBox}>
               <Ionicons name="mail-open-outline" size={48} color="#110023" />

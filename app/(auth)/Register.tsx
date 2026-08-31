@@ -17,29 +17,35 @@ import { ActivityIndicator } from "react-native";
 import { handleApiError } from "@/utils/handleApiError";
 import { handleApiSuccess } from "@/utils/handleApiSuccess";
 import { useRegisterStore } from "@/features/auth/store/useRegisterStore";
-
+import { Role } from "@/features/auth/types/RegisterationRequestDto";
+import { useAuth } from "@/providers/AuthProvider";
 const Register = () => {
+
     const [secure, setSecure] = useState(true);
     const logo = require('../../assets/images/Padi.png');
-    const {email, fullName, password, role, setField, resetForm} = useRegisterStore()
+    const { email, fullName, password, role, setField, resetForm } = useRegisterStore();
+    const {login} = useAuth()
     const { mutate, error, isPending } = useRegister();
     const handleSuccess = () => {
+        
         router.push({ pathname: "/(auth)/VerifyEmail", params: { email } })
     }
     const handleSubmit = () => {
 
         const formData = {
-            fullName, 
-            email, 
-            password, 
+            fullName,
+            email,
+            password,
             role
         };
         mutate(formData, {
-            onSuccess: (data) => {
-                handleApiSuccess(data, "Verify your email");
+            onSuccess: async (response) => {
+                handleApiSuccess(response, "Verify your email");
+                resetForm();
+                const { accessToken, refreshToken } = response.data;
+                console.log(accessToken, refreshToken)
                 handleSuccess();
-                resetForm()
-            }, 
+            },
             onError: handleApiError,
 
         });
@@ -75,7 +81,7 @@ const Register = () => {
                         {/* Heading */}
                         <Text style={styles.title}>Welcome to Padi Learn</Text>
                         <Text style={styles.subtitle}>
-                            Enter your signup  details to continue
+                            Create your {role === Role.Student ? "Student Account to start learning" : role === Role.Instructor ? "Instructor Account to start teacing " : "Account "}
                         </Text>
 
                         {/* Email */}
