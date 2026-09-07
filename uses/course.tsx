@@ -25,15 +25,20 @@ const Courses = () => {
     const { data, isLoading, isError } = useCourses({
         search: searchQuery || undefined,
         level: selectedLevel === 'All Levels' ? undefined : selectedLevel.toLowerCase(),
-        isPublished: true, // published-only browsing
+        isPublished: true, 
     });
 
+    console.log(data)
+
     const courses = data?.courses ?? [];
+    console.log(courses)
 
     const categories = useMemo(() => {
         const unique = Array.from(new Set(courses.map((c) => c.category)));
         return ['All', ...unique];
     }, [courses]);
+
+    console.log(categories)
 
     const filteredCourses = useMemo(() => {
         return courses.filter((course) => {
@@ -65,7 +70,7 @@ const Courses = () => {
                 <TouchableOpacity style={styles.iconButton} activeOpacity={0.7} onPress={()=> router.back()}>
                     <ArrowLeft size={22} color="#110023" />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Your Classrooms</Text>
+                <Text style={styles.headerTitle}>My Enrolllments</Text>
                 <TouchableOpacity
                     style={styles.iconButton}
                     activeOpacity={0.7}
@@ -117,7 +122,7 @@ const Courses = () => {
                 {/* Global Track Analytics Mini Panel */}
                 <View style={styles.trackOverviewPanel}>
                     <View style={styles.panelLeft}>
-                        <Text style={styles.panelTitle}>Sprint Status Overview</Text>
+                        <Text style={styles.panelTitle}>Avalible courses</Text>
                         <Text style={styles.panelSubtitle}>
                             {isLoading ? "Loading cohorts..." : `${filteredCourses.length} available cohorts`}
                         </Text>
@@ -129,7 +134,7 @@ const Courses = () => {
 
                 {/* Courses Cards Iterative Component Node Render stack */}
                 <View style={styles.listSection}>
-                    <Text style={styles.sectionLabel}>Active Cohorts</Text>
+                    
                     {isLoading && <ActivityIndicator color="#110023" style={{ marginTop: 20 }} />}
                     {isError && <Text style={styles.emptyText}>Could not load courses. Pull to refresh.</Text>}
                     {!isLoading && !isError && filteredCourses.length === 0 && (

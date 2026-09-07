@@ -9,7 +9,10 @@ import {
   Compass, 
   BookOpen, 
   User, 
-  Home
+  Home,
+  Handbag,
+  Hand,
+ 
 } from 'lucide-react-native';
 
 export default function TabLayout() {
@@ -59,11 +62,11 @@ export default function TabLayout() {
       />
 
       <Tabs.Screen
-        name="courses"
+        name="market"
         options={{
-          title: 'Courses',
+          title: 'market',
           tabBarIcon: ({ color, focused }) => (
-            <BookOpen
+            <Handbag
               size={27} 
               color={color} 
               strokeWidth={focused ? 2.5 : 2} 
@@ -74,11 +77,11 @@ export default function TabLayout() {
       
       {/* 2. Course Discovery Marketplace */}
       <Tabs.Screen
-        name="explore"
+        name="learn"
         options={{
-          title: 'Explore',
+          title: 'My learning',
           tabBarIcon: ({ color, focused }) => (
-            <Compass 
+            <BookOpen 
               size={27} 
               color={color} 
               strokeWidth={focused ? 2.5 : 2} 

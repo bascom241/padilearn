@@ -224,10 +224,14 @@ const CourseDetails = () => {
 
       {/* High-End Fixed Bottom Sticky Checkout Bar Container */}
       <View style={styles.stickyFooterBar}>
-        <View style={styles.footerPriceContainer}>
+
+        {
+          !course.isEnrolled &&       <View style={styles.footerPriceContainer}>
           <Text style={styles.priceLabel}>TOTAL ACCESS</Text>
           <Text style={styles.footerPriceValue}>{formatPrice(course.price)}</Text>
         </View>
+        }
+  
         {course.isEnrolled ? (
           <View style={[styles.primaryEnrollButton, styles.enrolledButton]}>
             <Text style={styles.enrollButtonText}>You are enrolled</Text>

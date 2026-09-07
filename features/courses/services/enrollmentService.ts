@@ -8,15 +8,18 @@ export const initializeEnrollment = async (
   return response.data.data;
 };
 
+
 export const verifyEnrollment = async (reference: string) => {
   const response = await apiClient.get(`/enrollments/verify/${reference}`);
   return response.data.data;
 };
 
+
 export const getEnrollmentStatus = async (courseId: string): Promise<EnrollmentStatus> => {
   const response = await apiClient.get(`/enrollments/course/${courseId}/status`);
   return response.data.data;
 };
+
 
 export const getMyEnrollments = async () => {
   const response = await apiClient.get("/enrollments/my");
